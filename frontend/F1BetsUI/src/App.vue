@@ -1,11 +1,13 @@
 <script setup lang="ts">
   import { RouterView } from 'vue-router';
+  import './assets/variables.css';
 </script>
 
 <template>
   <RouterView />
 </template>
 
+#FF1801
 
 <style>
   * {

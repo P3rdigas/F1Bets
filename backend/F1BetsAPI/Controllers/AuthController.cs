@@ -37,7 +37,7 @@ public class AuthController(IUserService userService, JwtService jwtService) : C
             return BadRequest(ModelState);
         }
 
-        var result = _userService.GetByEmail(request.Email);
+        var result = _userService.GetByUsername(request.Username);
 
         if (!result.Success)
         {
@@ -49,7 +49,7 @@ public class AuthController(IUserService userService, JwtService jwtService) : C
         if (user.Password != request.Password)  // TODO: hash passwords
             return Unauthorized("Wrong password");
 
-        var token = _jwtService.GenerateToken(user.Id, user.Name, user.Email);
+        var token = _jwtService.GenerateToken(user.Id, user.Username);
         return Ok(new { token });
     }
 }

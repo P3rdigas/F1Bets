@@ -10,19 +10,19 @@ public class UserService : IUserService
     public Result<User> Register(RegisterRequest request)
     {        
         // Email already in use
-        if (_usersList.Any(u => u.Email == request.Email))
+        if (_usersList.Any(u => u.Username == request.Username))
         {
-            return Result<User>.Error("Email already exists");
+            return Result<User>.Error("Username already exists");
         }
         
-        var user = new User(request.Name, request.Email, request.Password);
+        var user = new User(request.Username, request.Password);
         _usersList.Enqueue(user);
         return Result<User>.Ok(user);
     }
 
-    public Result<User>? GetByEmail(string email)
+    public Result<User>? GetByUsername(string username)
     {
-        var user = _usersList.FirstOrDefault(u => u.Email == email);
+        var user = _usersList.FirstOrDefault(u => u.Username == username);
         return user != null ? Result<User>.Ok(user) : Result<User>.Error("No user found");
     }
 }

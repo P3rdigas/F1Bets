@@ -9,7 +9,7 @@ public class JwtService(IConfiguration config)
 {
     readonly IConfiguration _config = config;
 
-    public string GenerateToken(Guid id, string name, string email)
+    public string GenerateToken(Guid id, string username)
     {
         var key = Encoding.UTF8.GetBytes(_config["JWT_KEY"]!);
         var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
@@ -17,8 +17,7 @@ public class JwtService(IConfiguration config)
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
-            new Claim(ClaimTypes.Name, name),
-            new Claim(JwtRegisteredClaimNames.Email, email)            
+            new Claim(ClaimTypes.Name, username),         
         };
 
         var token = new JwtSecurityToken(
