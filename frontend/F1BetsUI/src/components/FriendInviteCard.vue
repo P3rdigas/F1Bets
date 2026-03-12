@@ -2,26 +2,24 @@
     import { doc, collection, updateDoc, serverTimestamp } from "firebase/firestore";
     import { db } from '../firebase.ts'
     import { InviteType } from '../types/InviteType.ts'
-    import { FriendRequestStatus } from '../types/FriendRequestStatus.ts';
+    import { RequestStatus } from '../types/RequestStatus.ts';
 
     const props = defineProps<{
         id: string;
-        sender_id: string;
-        receiver_id: string;
         username: string;
         type: InviteType;
     }>();
 
     const acceptRequest = async () => {
         await updateDoc(doc(collection(db, 'friends'), props.id), {
-            status: FriendRequestStatus.ACCEPTED,
+            status: RequestStatus.ACCEPTED,
             responded_at: serverTimestamp(),
         });
     }
 
     const rejectRequest = async () => {
         await updateDoc(doc(collection(db, 'friends'), props.id), {
-            status: FriendRequestStatus.REJECTED,
+            status: RequestStatus.REJECTED,
             responded_at: serverTimestamp(),
         });
     }

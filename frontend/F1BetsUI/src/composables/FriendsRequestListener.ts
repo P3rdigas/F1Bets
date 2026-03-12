@@ -2,7 +2,7 @@ import { ref, onBeforeUnmount, watchEffect } from 'vue';
 import { doc, getDoc, collection, query, where, orderBy, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../firebase.ts';
 import { user } from './auth.ts';
-import { FriendRequestStatus } from '../types/FriendRequestStatus.ts';
+import { RequestStatus } from '../types/RequestStatus.ts';
 import type { FriendRequestsResponse } from '../types/FriendRequestsResponse.ts';
 
 const receivedRequests = ref<FriendRequestsResponse[]>([]);
@@ -27,13 +27,14 @@ function stopListeners() {
   sentRequests.value = [];
 }
 
+// TODO: Refactor code like in FriendsListener to avoid duplication
 function startListeners(currentUid: string) {
   const baseCol = collection(db, 'friends');
 
   const receivedQ = query(
     baseCol,
     where('receiver_id', '==', currentUid),
-    where('status', '==', FriendRequestStatus.PENDING),
+    where('status', '==', RequestStatus.PENDING),
     orderBy('created_at', 'desc'),
   );
 
@@ -43,24 +44,25 @@ function startListeners(currentUid: string) {
         const data = docSnap.data();
         const userRef = doc(db, 'users', data.sender_id);
         const userSnap = await getDoc(userRef);
-        const username = userSnap.exists() ? (userSnap.data().username as string) : 'Unknown';
 
-        return {
-          id: docSnap.id,
-          sender_id: data.sender_id,
-          receiver_id: data.receiver_id,
-          username: username,
-        } as FriendRequestsResponse;
+        if (userSnap.exists()) {
+          return {
+            id: docSnap.id,
+            username: userSnap.data().username as string,
+          } as FriendRequestsResponse;
+        }
+
+        return undefined;
       })
     );
 
-    receivedRequests.value = requests;
+    receivedRequests.value = requests.filter((req): req is FriendRequestsResponse => req !== undefined);;
   });
 
   const sentQ = query(
     baseCol,
     where('sender_id', '==', currentUid),
-    where('status', '==', FriendRequestStatus.PENDING),
+    where('status', '==', RequestStatus.PENDING),
     orderBy('created_at', 'desc'),
   );
 
@@ -70,22 +72,23 @@ function startListeners(currentUid: string) {
         const data = docSnap.data();
         const userRef = doc(db, 'users', data.receiver_id);
         const userSnap = await getDoc(userRef);
-        const username = userSnap.exists() ? (userSnap.data().username as string) : 'Unknown';
+       
+        if (userSnap.exists()) {
+          return {
+            id: docSnap.id,
+            username: userSnap.data().username as string,
+          } as FriendRequestsResponse;
+        }
 
-        return {
-          id: docSnap.id,
-          sender_id: data.sender_id,
-          receiver_id: data.receiver_id,
-          username: username,
-        } as FriendRequestsResponse;
+        return undefined;
       })
     );
     
-    sentRequests.value = requests;
+    sentRequests.value = requests.filter((req): req is FriendRequestsResponse => req !== undefined);
   });
 }
 
-export function useFriendRequests() {
+export function userFriendRequests() {
   watchEffect(() => {
     const current = user.value;
     stopListeners();
