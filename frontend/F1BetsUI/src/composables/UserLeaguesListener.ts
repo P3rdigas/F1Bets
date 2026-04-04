@@ -36,7 +36,7 @@ function startLeagueListeners(currentUid: string) {
                     const leagueData = leagueSnap.data();
 
                     return {
-                        id: leagueData.league_id,
+                        id: leagueSnap.id,
                         name: leagueData.name,
                         seasonYear: leagueData.season_year,
                         createdBy: leagueData.created_by,

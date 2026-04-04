@@ -4,6 +4,7 @@ import { auth } from '../firebase.ts'
 import MainView from '../views/MainView.vue';
 import HomeView from '../views/HomeView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
+import LeagueView from '../views/LeagueView.vue';
 
 const routes = [
     { 
@@ -15,6 +16,12 @@ const routes = [
         path: '/home', 
         name: 'Home', 
         component: HomeView,
+        meta: { requiresAuth: true }
+    },
+    { 
+        path: '/league/:id', 
+        name: 'League', 
+        component: LeagueView,
         meta: { requiresAuth: true }
     },
     {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
     import { ref } from 'vue';
+    import { RouterLink } from "vue-router";
     import { collection, addDoc, query, where, getDocs, limit , serverTimestamp } from "firebase/firestore";
     import { db } from '../firebase.ts'
     import { user } from '../composables/auth.ts';
@@ -163,53 +164,54 @@
                         <button @click="createLeague">Create League</button>
                     </div>
 
-                    <!-- TODO: Just a concept, implement final version -->
-                    <Teleport to="body">
-                        <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModal">
-                            <div class="create-league-modal">
-                            <h2>Criar Nova Liga</h2>
-                            
-                            <input 
-                                v-model="leagueName" 
-                                placeholder="Nome da Liga (ex: Liga F1 2026)"
-                                class="league-input"
-                            />
-                            
-                            <!-- TODO: If no friends send a message -->
-                            <div class="friends-section">
-                                <label>Convidar Amigos:</label>
-                                <div class="friends-list">
-                                <div 
-                                    v-for="friend in friends" 
-                                    :key="friend.id"
-                                    class="friend-item"
-                                    :class="{ selected: selectedFriends.includes(friend.id) }"
-                                    @click="toggleFriend(friend.id)"
-                                >
-                                    {{ friend.username }}
+                    <div class="home-left-box-content">
+                        <!-- TODO: Just a concept, implement final version -->
+                        <Teleport to="body">
+                            <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModal">
+                                <div class="create-league-modal">
+                                <h2>Criar Nova Liga</h2>
+                                
+                                <input 
+                                    v-model="leagueName" 
+                                    placeholder="Nome da Liga (ex: Liga F1 2026)"
+                                    class="league-input"
+                                />
+                                
+                                <!-- TODO: If no friends send a message -->
+                                <div class="friends-section">
+                                    <label>Convidar Amigos:</label>
+                                    <div class="friends-list">
+                                    <div 
+                                        v-for="friend in friends" 
+                                        :key="friend.id"
+                                        class="friend-item"
+                                        :class="{ selected: selectedFriends.includes(friend.id) }"
+                                        @click="toggleFriend(friend.id)"
+                                    >
+                                        {{ friend.username }}
+                                    </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="modal-actions">
+                                    <button @click="closeModal" class="cancel">Cancelar</button>
+                                    <button @click="confirmCreateLeague" :disabled="!leagueName.trim()" class="create">
+                                    Criar Liga
+                                    </button>
                                 </div>
                                 </div>
                             </div>
-                            
-                            <div class="modal-actions">
-                                <button @click="closeModal" class="cancel">Cancelar</button>
-                                <button @click="confirmCreateLeague" :disabled="!leagueName.trim()" class="create">
-                                Criar Liga
-                                </button>
-                            </div>
-                            </div>
+                        </Teleport>
+
+                        <div v-if="leagues.length === 0" class="no-leagues">
+                            No leagues yet. Create or join one!
                         </div>
-                    </Teleport>
 
-                    <div v-if="leagues.length === 0" class="no-leagues">
-                        No leagues yet. Create or join one!
-                    </div>
-
-                    <div v-else v-for="league in leagues" class="league-card">
-                        <router-link :to="`/league/${league.id}`">
-                            <h3>{{ league.name }}</h3>
-                            <p>Season {{ league.seasonYear }} • {{ league.createdBy }}</p>
-                        </router-link>
+                        <div v-else v-for="league in leagues" :key="league.id" class="league-card">
+                            <RouterLink :to="{ name: 'League', params: { id: league.id }, query: { seasonYear: league.seasonYear } }">
+                                <h4>{{ league.name }} - Season {{ league.seasonYear }} • {{ league.createdBy }}</h4>
+                            </RouterLink>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -238,7 +240,6 @@
 
     .home-wrapper {
         flex: 1;
-        background-color: aqua;
         display: flex;
     }
 
@@ -251,10 +252,11 @@
 
     .home-left-box {
         width: 80%;
-        height: 50%;
+        height: 50vh;
         background-color: white;
         border-radius: 2.5%;
         margin-top: 3vh;
+        overflow-y: auto;
     }
 
     .home-left-box-header {
@@ -266,6 +268,12 @@
         background-color: aqua;
     }
 
+    .home-left-box-content {
+        /* flex: 1; */
+        overflow-y: auto;
+        padding: 1vh;
+    }
+
     .home-right {
         background-color: gold;
         width: 50%;
@@ -275,10 +283,11 @@
 
     .home-right-box {
         width: 80%;
-        height: 50%;
+        height: 50vh;
         background-color: white;
         border-radius: 2.5%;
         margin-top: 3vh;
+        overflow-y: auto;
     }
 
     /* TODO: It's just concept, implement final version*/
