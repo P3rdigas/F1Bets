@@ -18,6 +18,7 @@
     const route = useRoute();
 
     const seasonYear = route.query.seasonYear as string;
+    const leagueId = route.params.id as string;
 
     const driversStandings = ref<DriverStanding[]>([]);
     const constructorsStandings = ref<ConstructorStanding[]>([]);
@@ -58,8 +59,6 @@
 
             drivers.value = driversSnap.docs.map(docSnap => {
                 const data = docSnap.data() as DriverFirestore;
-
-                console.log('Driver data:', data);
 
                 return {
                     driverId: data.driver_id,
@@ -148,7 +147,7 @@
                     <div v-if="races.length">
                         <h3>Calendar Season ({{ seasonYear }})</h3>
                         <div v-for="item in races" :key="item.round">
-                            <RaceCard :race="item" :drivers="drivers"/>
+                            <RaceCard :race="item" :drivers="drivers" :leagueId="leagueId"/>
                         </div>
                     </div>
                 </div>

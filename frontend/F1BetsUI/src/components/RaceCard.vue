@@ -1,13 +1,17 @@
 <script setup lang="ts">
     import { computed, ref, Teleport } from 'vue'
+    import { doc, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
+    import { db } from "../firebase";
+    import { useAuth } from '../composables/auth.ts'
     import type { Race } from '../types/Race.ts';
 
     const props = defineProps<{
-        race: Race
-        drivers: any[]
+        race: Race;
+        drivers: any[];
+        leagueId: string;
     }>();
 
-    // console.log('RaceCard props:', props.drivers);
+    const { user, authReady } = useAuth();
 
     const now = ref(Date.now());
     const showBetModal = ref(false);
@@ -90,36 +94,88 @@
     function isSprintWeekend(race: Race) {
         return race.weekendType === 'sprint';
     }
+
+    const handleSubmitBet = async () => {
+        if (!raceToBet.value) return;
+
+        await submitBet(props.leagueId, raceToBet.value);
+        closeBetModal();
+    };
+
+    async function submitBet(leagueId: string, race: Race) {
+        if (!authReady.value || !user.value) return;
+
+        const userId = user.value.uid;
+
+        const raceId = `race_${race.round}`;
+
+        const raceBetRef = doc(db, "leagues", leagueId, "bets", raceId);
+        const raceBetSnap = await getDoc(raceBetRef);
+        
+        if(!raceBetSnap.exists()) {
+            await setDoc(raceBetRef, {
+                season: race.season,
+                round: race.round,
+                race_name: race.raceName,
+                weekend_type: race.weekendType,
+                score_calculated_at: null,
+                mvp_user_id: null,
+            });
+        }
+
+        const entryRef = doc(db, "leagues", leagueId, "bets", raceId, "entries", userId);
+
+        await setDoc(entryRef, {
+            submitted_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+            sprint: race.weekendType === "sprint" ? {
+                pole: sprintPole.value,
+                first: sprintFirst.value,
+                second: sprintSecond.value,
+                third: sprintThird.value,
+            } : null,
+            race: {
+                pole: racePole.value,
+                first: raceFirst.value,
+                second: raceSecond.value,
+                third: raceThird.value,
+            },
+            points: {
+                score: 0,
+                last_calculated_at: null
+            },
+        }, { merge: true });
+    }
 </script>
 
 <template>
     <Teleport to="body">
         <div v-if="showBetModal" class="modal-overlay" @click.self="closeBetModal">
             <div class="modal-content">
-                <form>
+                <form v-on:submit.prevent="handleSubmitBet">
                     <div v-if="raceToBet !== null && isSprintWeekend(raceToBet)">
                         <h2>Sprint Bet</h2>
                         <label for="sprintPole">Sprint Pole:</label>
                         <select required v-model="sprintPole" name="sprintPole">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="sprintFirst">Sprint First:</label>
                         <select required v-model="sprintFirst" name="sprintFirst">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="sprintSecond">Sprint Second:</label>
                         <select required v-model="sprintSecond" name="sprintSecond">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="sprintThird">Sprint Third:</label>
                         <select required v-model="sprintThird" name="sprintThird">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
@@ -129,25 +185,25 @@
                         <h2>Race Bet</h2>
                         <label for="racePole">Race Pole:</label>
                         <select required v-model="racePole" name="racePole">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="raceFirst">Race First:</label>
                         <select required v-model="raceFirst" name="raceFirst">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="raceSecond">Race Second:</label>
                         <select required v-model="raceSecond" name="raceSecond">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="raceThird">Race Third:</label>
                         <select required v-model="raceThird" name="raceThird">
-                            <option v-for="driver in drivers" :value="driver.value">
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>

@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, readonly } from 'vue';
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../firebase";
 
@@ -16,3 +16,11 @@ onAuthStateChanged(auth, (firebaseUser) => {
   authReady.value = true;
   resolveAuth(firebaseUser);
 });
+
+export function useAuth() {
+  return {
+    user: readonly(user),
+    authReady: readonly(authReady),
+    authPromise,
+  };
+}
