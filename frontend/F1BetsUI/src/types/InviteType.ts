@@ -1,6 +1,6 @@
 export const InviteType = {
     SENT: 'SENT',
     RECEIVED: 'RECEIVED'
-} as const
+} as const;
 
-export type InviteType = typeof InviteType[keyof typeof InviteType]
+export type InviteType = typeof InviteType[keyof typeof InviteType];

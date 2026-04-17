@@ -1,13 +1,19 @@
 <script setup lang="ts">
     import { useRoute } from 'vue-router'
     import { ref, onMounted } from 'vue'
-    import type { DriverStanding } from '../types/DriverStanding.ts'
-    import type { ConstructorStanding } from '../types/ConstructorStanding.ts'
-    import type { Race } from '../types/Race.ts'
-    import type { RaceSprint } from '../types/RaceSprint.ts'
+    import { getDocs, collection, query, orderBy } from 'firebase/firestore';
+    import { db } from '../firebase.ts';
+    import type { DriverStanding } from '../types/DriverStanding.ts';
+    import type { ConstructorStanding } from '../types/ConstructorStanding.ts';
+    import type { Race } from '../types/Race.ts';
+    import type { Driver } from '../types/Driver.ts';
+    import type { DriverStandingFirestore } from '../types/firestore/DriverStandingFirestore.ts';
+    import type { ConstructorStandingFirestore } from '../types/firestore/ConstructorStandingFirestore.ts';
+    import type { RaceFirestore } from '../types/firestore/RaceFirestore.ts';
+    import type { DriverFirestore } from '../types/firestore/DriverFirestore.ts';
     import Navbar from '../components/Navbar.vue';
     import NextEventDisplay from '../components/NextEventDisplay.vue';
-    import RaceCard from '../components/RaceCard.vue'
+    import RaceCard from '../components/RaceCard.vue';
 
     const route = useRoute();
 
@@ -15,48 +21,101 @@
 
     const driversStandings = ref<DriverStanding[]>([]);
     const constructorsStandings = ref<ConstructorStanding[]>([]);
-    const races = ref<(Race | RaceSprint)[]>([]);
+    const races = ref<Race[]>([]);
+    const drivers = ref<Driver[]>([]);
 
-    async function loadStandings() {
-        // try {
-        //     const res = await fetch(
-        //         `https://api.jolpi.ca/ergast/f1/${seasonYear}/driverstandings.json`
-        //     );
+    async function loadData() {
+        // TODO: Throw error if seasonYear is not valid
+        if (!seasonYear) return;
 
-        //     if (!res.ok) {
-        //         throw new Error('Failed to fetch driver standings');
-        //     } 
-        //     const drivers = await res.json();
-        //     driversStandings.value = drivers.MRData.StandingsTable.StandingsLists[0]?.DriverStandings ?? [];
-        // } catch (error) {
-        //     console.error('Driver standings error:', error)
-        //     driversStandings.value = []
-        // }
+        try {
+            const driversQ = query(
+                collection(db, 'f1_seasons', seasonYear, 'drivers'),
+                orderBy('given_name', 'asc')
+            )
 
-        const driversResp = await fetch(
-            `https://api.jolpi.ca/ergast/f1/${seasonYear}/driverstandings.json`
-        );
+            const racesQ = query(
+                collection(db, 'f1_seasons', seasonYear, 'races'),
+                orderBy('round', 'asc')
+            );
 
-        const drivers = await driversResp.json();
-        driversStandings.value = drivers.MRData.StandingsTable.StandingsLists[0]?.DriverStandings ?? [];
+            const driverStandingsQ = query(
+                collection(db, 'f1_seasons', seasonYear, 'driver_standings'),
+                orderBy('position', 'asc')
+            );
 
-        const constructorsResp = await fetch(
-            `https://api.jolpi.ca/ergast/f1/${seasonYear}/constructorstandings.json`
-        );
+            const constructorStandingsQ = query(
+                collection(db, 'f1_seasons', seasonYear, 'constructor_standings'),
+                orderBy('position', 'asc')
+            );
 
-        const constructors = await constructorsResp.json();
-        constructorsStandings.value = constructors.MRData.StandingsTable.StandingsLists[0]?.ConstructorStandings ?? [];
+            const [driversSnap, racesSnap, driverStandingsSnap, constructorStandingsSnap,] = await Promise.all([
+                getDocs(driversQ),
+                getDocs(racesQ),
+                getDocs(driverStandingsQ),
+                getDocs(constructorStandingsQ),
+            ]);
 
-        const racesResp = await fetch(
-            `https://api.jolpi.ca/ergast/f1/${seasonYear}/races.json`
-        );
+            drivers.value = driversSnap.docs.map(docSnap => {
+                const data = docSnap.data() as DriverFirestore;
 
-        const racesData = await racesResp.json();
-        races.value = racesData.MRData.RaceTable.Races ?? [];
+                console.log('Driver data:', data);
+
+                return {
+                    driverId: data.driver_id,
+                    givenName: data.given_name,
+                    familyName: data.family_name,
+                } as Driver;
+            });
+
+            races.value = racesSnap.docs.map(docSnap => {
+                const data = docSnap.data() as RaceFirestore;
+
+                return {
+                    season: seasonYear,
+                    round: data.round,
+                    raceName: data.race_name,
+                    weekendType: data.weekend_type,
+                    bettingOpensAt: data.betting_open_at,
+                    bettingClosesAt: data.betting_closes_at
+                } as Race;
+            });
+            
+
+            driversStandings.value = driverStandingsSnap.docs.map(docSnap => {
+                const data = docSnap.data() as DriverStandingFirestore;
+
+                return {
+                    Driver: {
+                        driverId: data.driver.driver_id,
+                        givenName: data.driver.given_name,
+                        familyName: data.driver.family_name,
+                    },
+                    position: data.position,
+                    points: data.points,
+                } as DriverStanding;
+            });
+
+            constructorsStandings.value = constructorStandingsSnap.docs.map(docSnap => {
+                const data = docSnap.data() as ConstructorStandingFirestore;
+
+                return {
+                    Constructor: {
+                        constructorId: data.constructor.constructor_id,
+                        name: data.constructor.name,
+                    },
+                    position: data.position,
+                    points: data.points,
+                } as ConstructorStanding;
+            });
+
+        } catch (err) {
+            console.error('Error loading F1 data:', err);
+        }
     }
 
     onMounted(() => {
-        loadStandings()
+        loadData()
     })
 </script>
 
@@ -89,7 +148,7 @@
                     <div v-if="races.length">
                         <h3>Calendar Season ({{ seasonYear }})</h3>
                         <div v-for="item in races" :key="item.round">
-                            <RaceCard :race="item" />
+                            <RaceCard :race="item" :drivers="drivers"/>
                         </div>
                     </div>
                 </div>

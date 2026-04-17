@@ -1,9 +1,10 @@
-import type { RaceBase } from "./RaceBase.ts"
-import type { Session } from "./Session.ts"
+import type { Timestamp } from "firebase/firestore";
 
-export interface Race extends RaceBase {
-    FirstPractice: Session
-    SecondPractice: Session
-    ThirdPractice: Session
-    Qualifying: Session
+export interface Race {
+    season: string;
+    round: number;
+    raceName: string;
+    weekendType: string;
+    bettingOpensAt: Timestamp;
+    bettingClosesAt: Timestamp;
 }

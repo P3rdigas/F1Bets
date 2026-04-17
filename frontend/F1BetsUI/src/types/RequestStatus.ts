@@ -2,6 +2,6 @@ export const RequestStatus = {
     ACCEPTED: 'ACCEPTED',
     REJECTED: 'REJECTED',
     PENDING: 'PENDING'
-} as const
+} as const;
 
-export type RequestStatus = typeof RequestStatus[keyof typeof RequestStatus]
+export type RequestStatus = typeof RequestStatus[keyof typeof RequestStatus];

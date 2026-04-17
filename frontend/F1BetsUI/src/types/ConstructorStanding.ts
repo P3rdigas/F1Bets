@@ -1,9 +1,8 @@
 export interface ConstructorStanding {
-  position: string
-  points: string
-  wins: string
   Constructor: {
-    constructorId: string
-    name: string
-  }
+    constructorId: string;
+    name: string;
+  };
+  position: number;
+  points: number;
 }
