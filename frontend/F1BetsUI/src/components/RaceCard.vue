@@ -29,14 +29,7 @@
         now.value = Date.now()
     }, 60000);
 
-    const openBetModal = (race: Race) => {
-        showBetModal.value = true;
-        raceToBet.value = race;
-    };
-
-    const closeBetModal = () => {
-        showBetModal.value = false;
-        raceToBet.value = null;
+    function resetBetForm() {
         sprintPole.value = null;
         sprintFirst.value = null;
         sprintSecond.value = null;
@@ -45,6 +38,41 @@
         raceFirst.value = null;
         raceSecond.value = null;
         raceThird.value = null;
+    }
+
+    const openBetModal = async (race: Race) => {
+        showBetModal.value = true;
+        raceToBet.value = race;
+
+        // Get the user bet if already made one 
+        resetBetForm();
+
+        if (!authReady.value || !user.value) return;
+
+        const userId = user.value.uid;
+        const raceId = `race_${race.round}`;
+        const entryRef = doc(db, "leagues", props.leagueId, "bets", raceId, "entries", userId);
+        const entrySnap = await getDoc(entryRef);
+
+        if (!entrySnap.exists()) return;
+
+        const data = entrySnap.data();
+
+        sprintPole.value = data.sprint?.pole ?? null;
+        sprintFirst.value = data.sprint?.first ?? null;
+        sprintSecond.value = data.sprint?.second ?? null;
+        sprintThird.value = data.sprint?.third ?? null;
+
+        racePole.value = data.race?.pole ?? null;
+        raceFirst.value = data.race?.first ?? null;
+        raceSecond.value = data.race?.second ?? null;
+        raceThird.value = data.race?.third ?? null;
+    };
+
+    const closeBetModal = () => {
+        showBetModal.value = false;
+        raceToBet.value = null;
+        resetBetForm();
     };
 
     const raceTiming = computed(() => {
@@ -124,27 +152,46 @@
         }
 
         const entryRef = doc(db, "leagues", leagueId, "bets", raceId, "entries", userId);
+        const entrySnap = await getDoc(entryRef);
 
-        await setDoc(entryRef, {
-            submitted_at: serverTimestamp(),
-            updated_at: serverTimestamp(),
-            sprint: race.weekendType === "sprint" ? {
-                pole: sprintPole.value,
-                first: sprintFirst.value,
-                second: sprintSecond.value,
-                third: sprintThird.value,
-            } : null,
-            race: {
-                pole: racePole.value,
-                first: raceFirst.value,
-                second: raceSecond.value,
-                third: raceThird.value,
-            },
-            points: {
-                score: 0,
-                last_calculated_at: null
-            },
-        }, { merge: true });
+        if (!entrySnap.exists()) {
+            await setDoc(entryRef, {
+                submitted_at: serverTimestamp(),
+                updated_at: serverTimestamp(),
+                sprint: race.weekendType === "sprint" ? {
+                    pole: sprintPole.value,
+                    first: sprintFirst.value,
+                    second: sprintSecond.value,
+                    third: sprintThird.value,
+                } : null,
+                race: {
+                    pole: racePole.value,
+                    first: raceFirst.value,
+                    second: raceSecond.value,
+                    third: raceThird.value,
+                },
+                points: {
+                    score: 0,
+                    last_calculated_at: null
+                }
+            });
+        } else {
+            await setDoc(entryRef, {
+                updated_at: serverTimestamp(),
+                sprint: race.weekendType === "sprint" ? {
+                    pole: sprintPole.value,
+                    first: sprintFirst.value,
+                    second: sprintSecond.value,
+                    third: sprintThird.value,
+                } : null,
+                race: {
+                    pole: racePole.value,
+                    first: raceFirst.value,
+                    second: raceSecond.value,
+                    third: raceThird.value,
+                }
+            }, { merge: true });
+        }
     }
 </script>
 
@@ -157,24 +204,28 @@
                         <h2>Sprint Bet</h2>
                         <label for="sprintPole">Sprint Pole:</label>
                         <select required v-model="sprintPole" name="sprintPole">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="sprintFirst">Sprint First:</label>
                         <select required v-model="sprintFirst" name="sprintFirst">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="sprintSecond">Sprint Second:</label>
                         <select required v-model="sprintSecond" name="sprintSecond">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="sprintThird">Sprint Third:</label>
                         <select required v-model="sprintThird" name="sprintThird">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
@@ -185,24 +236,28 @@
                         <h2>Race Bet</h2>
                         <label for="racePole">Race Pole:</label>
                         <select required v-model="racePole" name="racePole">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="raceFirst">Race First:</label>
                         <select required v-model="raceFirst" name="raceFirst">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="raceSecond">Race Second:</label>
                         <select required v-model="raceSecond" name="raceSecond">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                         </select>
                         <label for="raceThird">Race Third:</label>
                         <select required v-model="raceThird" name="raceThird">
+                            <option disabled value="">Select driver</option>
                             <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
