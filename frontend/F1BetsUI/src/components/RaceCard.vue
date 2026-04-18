@@ -123,8 +123,37 @@
         return race.weekendType === 'sprint';
     }
 
+    function hasDuplicates(values: Array<string | null>) {
+        const filledValues = values.filter((value): value is string => !!value);
+        return new Set(filledValues).size !== filledValues.length;
+    }
+
     const handleSubmitBet = async () => {
         if (!raceToBet.value) return;
+
+        const racePodiumHasDuplicates = hasDuplicates([
+            raceFirst.value,
+            raceSecond.value,
+            raceThird.value,
+        ]);
+
+        if (racePodiumHasDuplicates) {
+            alert("Race - First, second and third places must have different drivers.");
+            return;
+        }
+
+        if (isSprintWeekend(raceToBet.value)) {
+            const sprintPodiumHasDuplicates = hasDuplicates([
+                sprintFirst.value,
+                sprintSecond.value,
+                sprintThird.value,
+            ]);
+
+            if (sprintPodiumHasDuplicates) {
+                alert("Sprint - First, second and third places must have different drivers.");
+                return;
+            }
+        }
 
         await submitBet(props.leagueId, raceToBet.value);
         closeBetModal();
