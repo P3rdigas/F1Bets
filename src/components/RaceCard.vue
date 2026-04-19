@@ -1,7 +1,7 @@
 <script setup lang="ts">
     import { computed, ref, Teleport } from 'vue'
     import { doc, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
-    import { db } from "../firebase";
+    import { db } from "../firebase.ts";
     import { useAuth } from '../composables/auth.ts'
     import type { Race } from '../types/Race.ts';
 
@@ -321,73 +321,73 @@
 
 <style scoped>
 .race-card {
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background-color: #e5e5e5;
+    padding: 16px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #e5e5e5;
 }
 
 .race-card.locked {
-  background-color: #a0a0a0;
-  opacity: 0.85;
+    background-color: #a0a0a0;
+    opacity: 0.85;
 }
 
 .race-card h4 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
 }
 
 .race-card button {
-  align-self: flex-start;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background-color: #2d7ef7;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+    align-self: flex-start;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background-color: #2d7ef7;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
 .race-card button:hover {
-  background-color: #1b5fd1;
+    background-color: #1b5fd1;
 }
 
 .race-card span {
-  font-weight: 500;
-  margin-left: 6px;
+    font-weight: 500;
+    margin-left: 6px;
 }
 
 .race-card:not(.locked):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-    }
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
 
-    .modal-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        max-width: 500px;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    }
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
 </style>

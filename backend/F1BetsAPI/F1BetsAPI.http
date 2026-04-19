@@ -1,6 +1,0 @@
-@F1BetsAPI_HostAddress = http://localhost:5151
-
-GET {{F1BetsAPI_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
