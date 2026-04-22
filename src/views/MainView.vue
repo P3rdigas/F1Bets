@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // Home page logic
     import { ref } from 'vue';
-    import { signInWithEmailAndPassword, createUserWithEmailAndPassword} from "firebase/auth";
-    import { doc, collection, setDoc, query, where, getDocs, limit, serverTimestamp  } from "firebase/firestore";
+    import { signInWithEmailAndPassword, createUserWithEmailAndPassword, deleteUser} from "firebase/auth";
+    import { doc, runTransaction, serverTimestamp  } from "firebase/firestore";
     import { db, auth } from '../firebase.ts'
     import router from '../router/index.ts'
 
@@ -41,31 +41,60 @@
             return;
         }
 
+        const username = registerForm.value.username.trim().toLowerCase();
+        const email = registerForm.value.email.trim();
+        const password = registerForm.value.password;
+
         try {
-            // 1. Check username
-            const q = query(
-                collection(db, 'users'),
-                where('username', '==', registerForm.value.username),
-                limit(1)
-            );
-            const snap = await getDocs(q);
-            
-            if (!snap.empty) {
-                throw new Error("Username already exists!");
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+
+            const usernameRef = doc(db, 'usernames', username);
+            const userRef = doc(db, 'users', uid);
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const usernameSnap = await transaction.get(usernameRef);
+
+                    if (usernameSnap.exists()) {
+                        throw new Error('Username already exists!');
+                    }
+
+                    transaction.set(usernameRef, {
+                        user_id: uid,
+                        created_at: serverTimestamp(),
+                    });
+
+                    transaction.set(userRef, {
+                        avatar: null,
+                        created_at: serverTimestamp(),
+                        email: email,
+                        username: username,
+                    });
+                });
+
+                router.push({ name: 'Home' });
+            } catch (error) {
+                await deleteUser(userCredential.user);
+                throw error;
             }
-            
-            // 2. Auth + save
-            const userCredential = await createUserWithEmailAndPassword(auth, registerForm.value.email, registerForm.value.password);
-            await setDoc(doc(db, 'users', userCredential.user.uid), {
-                avatar: null,
-                createdAt: serverTimestamp(),
-                email: registerForm.value.email,
-                friends: [],
-                username: registerForm.value.username
-                
-            });
         } catch (error: any) {
-            alert(error.message);
+            if (error.code === 'auth/email-already-in-use') {
+            alert('Email already in use!');
+            return;
+            }
+
+            if (error.code === 'auth/invalid-email') {
+            alert('Invalid email!');
+            return;
+            }
+
+            if (error.code === 'auth/weak-password') {
+            alert('Weak password!');
+            return;
+            }
+
+            alert(error.message || 'Registration failed!');
         }
     };
 </script>
