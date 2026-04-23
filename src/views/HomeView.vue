@@ -22,6 +22,9 @@
 
     const friendName = ref('');
 
+    const isCreatingLeague = ref(false);
+    const isAddingFriend = ref(false);
+
     const createLeague = () => {
         showCreateModal.value = true;
     }
@@ -44,77 +47,83 @@
     const confirmCreateLeague = async () => {
         if (!user.value?.uid) return;
 
-        const ownerId = user.value.uid;
+        isCreatingLeague.value = true;
 
-        const ownerRef = doc(db, "users", ownerId);
-        const ownerSnap = await getDoc(ownerRef);
+        try {
+            const ownerId = user.value.uid;
 
-        if (!ownerSnap.exists()) return;
+            const ownerRef = doc(db, "users", ownerId);
+            const ownerSnap = await getDoc(ownerRef);
 
-        const ownerData = ownerSnap.data();
-        const seasonYear = new Date().getFullYear();
+            if (!ownerSnap.exists()) return;
 
-        const leagueRef = doc(collection(db, "leagues"));
-        const batch = writeBatch(db);
+            const ownerData = ownerSnap.data();
+            const seasonYear = new Date().getFullYear();
 
-        batch.set(leagueRef, {
-            season_year: seasonYear,
-            name: leagueName.value,
-            owner_id: ownerId,
-            owner_username: ownerData.username,
-            created_at: serverTimestamp(),
-        });
+            const leagueRef = doc(collection(db, "leagues"));
+            const batch = writeBatch(db);
 
-        batch.set(doc(db, "leagues", leagueRef.id, "members", ownerId), {
-            username: ownerData.username,
-            role: LeagueRoleType.OWNER,
-            total_points: 0,
-            joined_at: serverTimestamp(),
-        });
-
-        batch.set(doc(db, "users", ownerId, "leagues", leagueRef.id), {
-            league_name: leagueName.value,
-            season_year: seasonYear,
-            owner_id: ownerId,
-            owner_username: ownerData.username,
-            role: LeagueRoleType.OWNER,
-            joined_at: serverTimestamp(),
-        });
-
-        for (const friendId of selectedFriends.value) {
-            const friendRef = doc(db, "users", friendId);
-            const friendSnap = await getDoc(friendRef);
-
-            if (!friendSnap.exists()) continue;
-
-            const friendData = friendSnap.data();
-
-            const leagueInviteRef = doc(collection(db, "leagues", leagueRef.id, "invites"));
-            const inviteId = leagueInviteRef.id;
-
-            batch.set(leagueInviteRef, {
-                league_id: leagueRef.id,
-                receiver_id: friendId,
-                receiver_username: friendData.username,
-                status: RequestStatus.PENDING,
+            batch.set(leagueRef, {
+                season_year: seasonYear,
+                name: leagueName.value,
+                owner_id: ownerId,
+                owner_username: ownerData.username,
                 created_at: serverTimestamp(),
-                responded_at: null,
             });
 
-            batch.set(doc(db, "users", friendId, "league_invites", inviteId), {
-                league_id: leagueRef.id,
+            batch.set(doc(db, "leagues", leagueRef.id, "members", ownerId), {
+                username: ownerData.username,
+                role: LeagueRoleType.OWNER,
+                total_points: 0,
+                joined_at: serverTimestamp(),
+            });
+
+            batch.set(doc(db, "users", ownerId, "leagues", leagueRef.id), {
                 league_name: leagueName.value,
                 season_year: seasonYear,
-                sender_id: ownerId,
-                sender_username: ownerData.username,
-                status: RequestStatus.PENDING,
-                created_at: serverTimestamp(),
-                responded_at: null,
+                owner_id: ownerId,
+                owner_username: ownerData.username,
+                role: LeagueRoleType.OWNER,
+                joined_at: serverTimestamp(),
             });
-        }
 
-        await batch.commit();
-        closeModal();
+            for (const friendId of selectedFriends.value) {
+                const friendRef = doc(db, "users", friendId);
+                const friendSnap = await getDoc(friendRef);
+
+                if (!friendSnap.exists()) continue;
+
+                const friendData = friendSnap.data();
+
+                const leagueInviteRef = doc(collection(db, "leagues", leagueRef.id, "invites"));
+                const inviteId = leagueInviteRef.id;
+
+                batch.set(leagueInviteRef, {
+                    league_id: leagueRef.id,
+                    receiver_id: friendId,
+                    receiver_username: friendData.username,
+                    status: RequestStatus.PENDING,
+                    created_at: serverTimestamp(),
+                    responded_at: null,
+                });
+
+                batch.set(doc(db, "users", friendId, "league_invites", inviteId), {
+                    league_id: leagueRef.id,
+                    league_name: leagueName.value,
+                    season_year: seasonYear,
+                    sender_id: ownerId,
+                    sender_username: ownerData.username,
+                    status: RequestStatus.PENDING,
+                    created_at: serverTimestamp(),
+                    responded_at: null,
+                });
+            }
+
+            await batch.commit();
+            closeModal();
+        } finally {
+            isCreatingLeague.value = false;
+        }
     }
 
     const friendRequest = async () => {
@@ -123,100 +132,107 @@
             return;
         }
 
-        const currentUid = user.value.uid;
+        isAddingFriend.value = true;
 
-        const q = query(
-            collection(db, "users"),
-            where("username", "==", friendName.value),
-            limit(1)
-        );
+        try {
+            const currentUid = user.value.uid;
 
-        const snap = await getDocs(q);
+            const q = query(
+                collection(db, "users"),
+                where("username", "==", friendName.value),
+                limit(1)
+            );
 
-        if (snap.empty) {
-            alert("Username not found!");
-            return;
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                alert("Username not found!");
+                return;
+            }
+
+            const targetDoc = snap.docs[0]!;
+            const targetUid = targetDoc.id;
+
+            if (targetUid === currentUid) {
+                alert("You can't add yourself!");
+                return;
+            }
+
+            const currentUserRef = doc(db, "users", currentUid);
+            const currentUserSnap = await getDoc(currentUserRef);
+
+            if (!currentUserSnap.exists()) return;
+
+            const existingFriendRef = doc(db, "users", currentUid, "friends", targetUid);
+            const existingFriendSnap = await getDoc(existingFriendRef);
+
+            if (existingFriendSnap.exists()) {
+                alert("You are already friends!");
+                return;
+            }
+
+            const sentRequestsQ = query(
+                collection(db, "users", currentUid, "friend_requests"),
+                where("other_user_id", "==", targetUid),
+                where("status", "==", RequestStatus.PENDING),
+                limit(1)
+            );
+
+            const sentRequestsSnap = await getDocs(sentRequestsQ);
+
+            if (!sentRequestsSnap.empty) {
+                alert("Friend request already sent!");
+                return;
+            }
+
+            const receivedRequestsQ = query(
+                collection(db, "users", currentUid, "friend_requests"),
+                where("other_user_id", "==", targetUid),
+                where("direction", "==", InviteType.RECEIVED),
+                where("status", "==", RequestStatus.PENDING),
+                limit(1)
+            );
+
+            const receivedRequestsSnap = await getDocs(receivedRequestsQ);
+
+            if (!receivedRequestsSnap.empty) {
+                alert("This user already sent you a friend request!");
+                return;
+            }
+
+            const targetData = targetDoc.data();
+            const currentUserData = currentUserSnap.data();
+
+            const senderRequestRef = doc(collection(db, "users", currentUid, "friend_requests"));
+            const requestId = senderRequestRef.id;
+
+            const receiverRequestRef = doc(db, "users", targetUid, "friend_requests", requestId);
+
+            const batch = writeBatch(db);
+
+            batch.set(senderRequestRef, {
+                other_user_id: targetUid,
+                other_username: targetData.username,
+                direction: InviteType.SENT,
+                status: RequestStatus.PENDING,
+                created_at: serverTimestamp(),
+                responded_at: null,
+            });
+
+            batch.set(receiverRequestRef, {
+                other_user_id: currentUid,
+                other_username: currentUserData.username,
+                direction: InviteType.RECEIVED,
+                status: RequestStatus.PENDING,
+                created_at: serverTimestamp(),
+                responded_at: null,
+            });
+
+            await batch.commit();
+        } finally {
+            isAddingFriend.value = false;
+            friendName.value = '';
         }
-
-        const targetDoc = snap.docs[0]!;
-        const targetUid = targetDoc.id;
-
-        if (targetUid === currentUid) {
-            alert("You can't add yourself!");
-            return;
-        }
-
-        const currentUserRef = doc(db, "users", currentUid);
-        const currentUserSnap = await getDoc(currentUserRef);
-
-        if (!currentUserSnap.exists()) return;
-
-        const existingFriendRef = doc(db, "users", currentUid, "friends", targetUid);
-        const existingFriendSnap = await getDoc(existingFriendRef);
-
-        if (existingFriendSnap.exists()) {
-            alert("You are already friends!");
-            return;
-        }
-
-        const sentRequestsQ = query(
-            collection(db, "users", currentUid, "friend_requests"),
-            where("other_user_id", "==", targetUid),
-            where("status", "==", RequestStatus.PENDING),
-            limit(1)
-        );
-
-        const sentRequestsSnap = await getDocs(sentRequestsQ);
-
-        if (!sentRequestsSnap.empty) {
-            alert("Friend request already sent!");
-            return;
-        }
-
-        const receivedRequestsQ = query(
-            collection(db, "users", currentUid, "friend_requests"),
-            where("other_user_id", "==", targetUid),
-            where("direction", "==", InviteType.RECEIVED),
-            where("status", "==", RequestStatus.PENDING),
-            limit(1)
-        );
-
-        const receivedRequestsSnap = await getDocs(receivedRequestsQ);
-
-        if (!receivedRequestsSnap.empty) {
-            alert("This user already sent you a friend request!");
-            return;
-        }
-
-        const targetData = targetDoc.data();
-        const currentUserData = currentUserSnap.data();
-
-        const senderRequestRef = doc(collection(db, "users", currentUid, "friend_requests"));
-        const requestId = senderRequestRef.id;
-
-        const receiverRequestRef = doc(db, "users", targetUid, "friend_requests", requestId);
-
-        const batch = writeBatch(db);
-
-        batch.set(senderRequestRef, {
-            other_user_id: targetUid,
-            other_username: targetData.username,
-            direction: InviteType.SENT,
-            status: RequestStatus.PENDING,
-            created_at: serverTimestamp(),
-            responded_at: null,
-        });
-
-        batch.set(receiverRequestRef, {
-            other_user_id: currentUid,
-            other_username: currentUserData.username,
-            direction: InviteType.RECEIVED,
-            status: RequestStatus.PENDING,
-            created_at: serverTimestamp(),
-            responded_at: null,
-        });
-
-        await batch.commit();
     }   
 </script>
 
@@ -237,17 +253,17 @@
                         <Teleport to="body">
                             <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModal">
                                 <div class="create-league-modal">
-                                <h2>Criar Nova Liga</h2>
+                                <h2>Create New League</h2>
                                 
                                 <input 
                                     v-model="leagueName" 
-                                    placeholder="Nome da Liga (ex: Liga F1 2026)"
+                                    placeholder="League Name (e.g., F1 League 2026)"
                                     class="league-input"
                                 />
                                 
                                 <!-- TODO: If no friends send a message -->
                                 <div class="friends-section">
-                                    <label>Convidar Amigos:</label>
+                                    <label>Invite Friends:</label>
                                     <div class="friends-list">
                                     <div 
                                         v-for="friend in friends" 
@@ -262,9 +278,9 @@
                                 </div>
                                 
                                 <div class="modal-actions">
-                                    <button @click="closeModal" class="cancel">Cancelar</button>
-                                    <button @click="confirmCreateLeague" :disabled="!leagueName.trim()" class="create">
-                                    Criar Liga
+                                    <button @click="closeModal" class="cancel">Cancel</button>
+                                    <button @click="confirmCreateLeague" :disabled="isCreatingLeague" class="create">
+                                        {{ isCreatingLeague ? 'Creating...' : 'Create League' }}
                                     </button>
                                 </div>
                                 </div>
@@ -289,7 +305,9 @@
                     <div class="home-right-box-form">
                         <form class="add-friend-form" v-on:submit.prevent="friendRequest">
                             <input v-model="friendName" type="text" placeholder="Username" required />
-                            <button type="submit">Send</button>
+                            <button type="submit" :disabled="isAddingFriend">
+                                {{ isAddingFriend ? 'Sending...' : 'Send' }}
+                            </button>
                         </form>
                     </div>
                 </div>

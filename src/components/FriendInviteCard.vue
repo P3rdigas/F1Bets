@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    import { ref } from 'vue';
     import { getDoc, doc, writeBatch, serverTimestamp } from "firebase/firestore";
     import { db } from '../firebase.ts';
     import { user } from '../composables/auth.ts';
@@ -12,74 +13,88 @@
         type: InviteType;
     }>();
 
+    const isResponding = ref(false);
+
     const acceptRequest = async () => {
         if (!user.value?.uid) return;
 
-        const currentUid = user.value.uid;
-        const otherUserId = props.otherUserId;
+        isResponding.value = true;
 
-        const currentUserRef = doc(db, "users", currentUid);
-        const currentUserSnap = await getDoc(currentUserRef);
+        try {
+            const currentUid = user.value.uid;
+            const otherUserId = props.otherUserId;
 
-        if (!currentUserSnap.exists()) return;
+            const currentUserRef = doc(db, "users", currentUid);
+            const currentUserSnap = await getDoc(currentUserRef);
 
-        const currentUserData = currentUserSnap.data();
+            if (!currentUserSnap.exists()) return;
 
-        const receivedRequestRef = doc(db, "users", currentUid, "friend_requests", props.id);
-        const sentRequestRef = doc(db, "users", otherUserId, "friend_requests", props.id);
+            const currentUserData = currentUserSnap.data();
 
-        const myFriendRef = doc(db, "users", currentUid, "friends", otherUserId);
-        const otherFriendRef = doc(db, "users", otherUserId, "friends", currentUid);
+            const receivedRequestRef = doc(db, "users", currentUid, "friend_requests", props.id);
+            const sentRequestRef = doc(db, "users", otherUserId, "friend_requests", props.id);
 
-        const batch = writeBatch(db);
+            const myFriendRef = doc(db, "users", currentUid, "friends", otherUserId);
+            const otherFriendRef = doc(db, "users", otherUserId, "friends", currentUid);
 
-        batch.update(receivedRequestRef, {
-            status: RequestStatus.ACCEPTED,
-            responded_at: serverTimestamp(),
-        });
+            const batch = writeBatch(db);
 
-        batch.update(sentRequestRef, {
-            status: RequestStatus.ACCEPTED,
-            responded_at: serverTimestamp(),
-        });
+            batch.update(receivedRequestRef, {
+                status: RequestStatus.ACCEPTED,
+                responded_at: serverTimestamp(),
+            });
 
-        batch.set(myFriendRef, {
-            user_id: props.otherUserId,
-            username: props.otherUsername,
-            created_at: serverTimestamp(),
-        });
+            batch.update(sentRequestRef, {
+                status: RequestStatus.ACCEPTED,
+                responded_at: serverTimestamp(),
+            });
 
-        batch.set(otherFriendRef, {
-            user_id: currentUid,
-            username: currentUserData.username,
-            created_at: serverTimestamp(),
-        });
+            batch.set(myFriendRef, {
+                user_id: props.otherUserId,
+                username: props.otherUsername,
+                created_at: serverTimestamp(),
+            });
 
-        await batch.commit();
+            batch.set(otherFriendRef, {
+                user_id: currentUid,
+                username: currentUserData.username,
+                created_at: serverTimestamp(),
+            });
+
+            await batch.commit();
+        } finally {
+            isResponding.value = false;
+        }
     }
 
     const rejectRequest = async () => {
         if (!user.value?.uid) return;
 
-        const currentUid = user.value.uid;
-        const otherUserId = props.otherUserId;
+        isResponding.value = true;
 
-        const receivedRequestRef = doc(db, "users", currentUid, "friend_requests", props.id);
-        const sentRequestRef = doc(db, "users", otherUserId, "friend_requests", props.id);
+        try {
+            const currentUid = user.value.uid;
+            const otherUserId = props.otherUserId;
 
-        const batch = writeBatch(db);
+            const receivedRequestRef = doc(db, "users", currentUid, "friend_requests", props.id);
+            const sentRequestRef = doc(db, "users", otherUserId, "friend_requests", props.id);
 
-        batch.update(receivedRequestRef, {
-            status: RequestStatus.REJECTED,
-            responded_at: serverTimestamp(),
-        });
+            const batch = writeBatch(db);
 
-        batch.update(sentRequestRef, {
-            status: RequestStatus.REJECTED,
-            responded_at: serverTimestamp(),
-        });
+            batch.update(receivedRequestRef, {
+                status: RequestStatus.REJECTED,
+                responded_at: serverTimestamp(),
+            });
 
-        await batch.commit();
+            batch.update(sentRequestRef, {
+                status: RequestStatus.REJECTED,
+                responded_at: serverTimestamp(),
+            });
+
+            await batch.commit();
+        } finally {
+            isResponding.value = false;
+        }
     }
 </script>
 
@@ -91,10 +106,10 @@
         </div>
         <div v-else class="received">
             <p class="username">{{otherUsername}}</p>
-            <button class="accept" @click="acceptRequest">
+            <button :disabled="isResponding" @click="acceptRequest">
                 <font-awesome-icon icon="fa-solid fa-circle-check" style="color: rgb(99, 230, 190);"/>
             </button>
-            <button class="reject" @click="rejectRequest">
+            <button :disabled="isResponding" @click="rejectRequest">
                 <font-awesome-icon icon="fa-solid fa-circle-xmark" style="color: rgb(228, 46, 46);"/>
             </button>   
         </div>    

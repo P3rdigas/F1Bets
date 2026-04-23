@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { computed } from 'vue';
+    import { ref, computed } from 'vue';
     import { signOut } from 'firebase/auth';
     import { auth } from '../firebase.ts';
     import router from '../router/index.ts';
@@ -15,12 +15,18 @@
     const leagueCount = computed(() => leagueInvites.value.length);
     const totalFriendInvites = computed(() => friendRequests.value.length);
 
+    const isLoggingOut = ref(false);
+
     const logout = async () => {
+        isLoggingOut.value = true;
+
         try {
             await signOut(auth);
             router.push({ name: 'Main' });
         } catch (error) {
             console.error('Logout error:', error);
+        } finally {
+            isLoggingOut.value = false;
         }
     } 
 </script>
@@ -92,7 +98,7 @@
                 </div>
             </div>
         </div>    
-        <button class="logout" @click="logout">Logout</button>
+        <button :disabled="isLoggingOut" class="logout" @click="logout">{{isLoggingOut ? 'Logging out...' : 'Logout'}}</button>
     </div>
 </template>
 

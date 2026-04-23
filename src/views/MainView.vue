@@ -20,18 +20,25 @@
         // avatar: null as File | null
     });
 
+    const isLoggingIn = ref(false);
+    const isRegistering = ref(false);
+
     // const onAvatarChange = (e: Event) => {
     //     const target = e.target as HTMLInputElement;
     //     registerForm.value.avatar = target.files?.[0] ?? null;
     // };
 
     const submitLogin = async () => {
+        isLoggingIn.value = true;
+
         try {
             await signInWithEmailAndPassword(auth, loginForm.value.email, loginForm.value.password);
             alert("Login OK!");
             router.push({ name: 'Home' });
         } catch (error: any) {
             alert(error.message);
+        } finally {
+            isLoggingIn.value = false;
         }
     };
 
@@ -44,6 +51,8 @@
         const username = registerForm.value.username.trim().toLowerCase();
         const email = registerForm.value.email.trim();
         const password = registerForm.value.password;
+
+        isRegistering.value = true;
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -95,6 +104,8 @@
             }
 
             alert(error.message || 'Registration failed!');
+        } finally {
+            isRegistering.value = false;
         }
     };
 </script>
@@ -112,7 +123,9 @@
             <form v-if="isLogin" class="auth-form" v-on:submit.prevent="submitLogin">
                 <input v-model="loginForm.email" type="email" placeholder="Email" required />
                 <input v-model="loginForm.password" type="password" placeholder="Password" required />
-                <button type="submit">Login</button>
+                <button type="submit" :disabled="isLoggingIn">
+                    {{ isLoggingIn ? 'Logging in...' : 'Login' }}
+                </button>
             </form>
 
             <!-- Register Form -->
@@ -122,7 +135,9 @@
                 <input v-model="registerForm.password" type="password" placeholder="Password" required />
                 <input v-model="registerForm.confirmPassword" type="password" placeholder="Confirm Password" required />
                 <!-- <input type="file" placeholder="Avatar" /> -->
-                <button type="submit">Register</button>
+                <button type="submit" :disabled="isRegistering">
+                    {{ isRegistering ? 'Registering...' : 'Register' }}
+                </button>
             </form>
         </div>
     </div>

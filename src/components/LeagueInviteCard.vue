@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    import { ref } from 'vue';
     import { doc, writeBatch, serverTimestamp } from "firebase/firestore";
     import { db } from '../firebase.ts'
     import { user } from '../composables/auth.ts';
@@ -17,68 +18,82 @@
         ownerId: string;
     }>();
 
+    const isResponding = ref(false);
+
     const acceptRequest = async () => {
         if (!user.value?.uid || !userProfile.value?.username) return;
 
-        const userId = user.value.uid;
+        isResponding.value = true;
 
-        const leagueInviteRef = doc(db, "leagues", props.leagueId, "invites", props.id);
-        const userInviteRef = doc(db, "users", userId, "league_invites", props.id);
-        const leagueMemberRef = doc(db, "leagues", props.leagueId, "members", userId);
-        const userLeagueRef = doc(db, "users", userId, "leagues", props.leagueId);
+        try {
+            const userId = user.value.uid;
 
-        const batch = writeBatch(db);
+            const leagueInviteRef = doc(db, "leagues", props.leagueId, "invites", props.id);
+            const userInviteRef = doc(db, "users", userId, "league_invites", props.id);
+            const leagueMemberRef = doc(db, "leagues", props.leagueId, "members", userId);
+            const userLeagueRef = doc(db, "users", userId, "leagues", props.leagueId);
 
-        batch.update(leagueInviteRef, {
-            status: RequestStatus.ACCEPTED,
-            responded_at: serverTimestamp(),
-        });
+            const batch = writeBatch(db);
 
-        batch.update(userInviteRef, {
-            status: RequestStatus.ACCEPTED,
-            responded_at: serverTimestamp(),
-        });
+            batch.update(leagueInviteRef, {
+                status: RequestStatus.ACCEPTED,
+                responded_at: serverTimestamp(),
+            });
 
-        batch.set(leagueMemberRef, {
-            username: userProfile.value.username,
-            role: LeagueRoleType.MEMBER,
-            total_points: 0,
-            joined_at: serverTimestamp(),
-        });
+            batch.update(userInviteRef, {
+                status: RequestStatus.ACCEPTED,
+                responded_at: serverTimestamp(),
+            });
 
-        batch.set(userLeagueRef, {
-            league_name: props.leagueName,
-            season_year: props.leagueSeasonYear,
-            owner_id: props.ownerId,
-            owner_username: props.ownerUsername,
-            role: LeagueRoleType.MEMBER,
-            joined_at: serverTimestamp(),
-        });
+            batch.set(leagueMemberRef, {
+                username: userProfile.value.username,
+                role: LeagueRoleType.MEMBER,
+                total_points: 0,
+                joined_at: serverTimestamp(),
+            });
 
-        await batch.commit();
+            batch.set(userLeagueRef, {
+                league_name: props.leagueName,
+                season_year: props.leagueSeasonYear,
+                owner_id: props.ownerId,
+                owner_username: props.ownerUsername,
+                role: LeagueRoleType.MEMBER,
+                joined_at: serverTimestamp(),
+            });
+
+            await batch.commit();
+        } finally {
+            isResponding.value = false;
+        }
     }
 
     const rejectRequest = async () => {
         if (!user.value?.uid) return;
 
-        const userId = user.value.uid;
+        isResponding.value = true;
 
-        const leagueInviteRef = doc(db, "leagues", props.leagueId, "invites", props.id);
-        const userInviteRef = doc(db, "users", userId, "league_invites", props.id);
+        try {
+            const userId = user.value.uid;
 
-        const batch = writeBatch(db);
+            const leagueInviteRef = doc(db, "leagues", props.leagueId, "invites", props.id);
+            const userInviteRef = doc(db, "users", userId, "league_invites", props.id);
 
-        batch.update(leagueInviteRef, {
-            status: RequestStatus.REJECTED,
-            responded_at: serverTimestamp(),
-        });
+            const batch = writeBatch(db);
 
-        batch.update(userInviteRef, {
-            status: RequestStatus.REJECTED,
-            responded_at: serverTimestamp(),
-        });
+            batch.update(leagueInviteRef, {
+                status: RequestStatus.REJECTED,
+                responded_at: serverTimestamp(),
+            });
 
-        await batch.commit();
+            batch.update(userInviteRef, {
+                status: RequestStatus.REJECTED,
+                responded_at: serverTimestamp(),
+            });
+
+            await batch.commit();
+        } finally {
+            isResponding.value = false;
+        }
     }
 </script>
 
@@ -87,10 +102,10 @@
         <div class="received">
             <p class="league-name">{{leagueName}}</p>
             <p class="owner-username">{{ownerUsername}}</p>
-            <button class="accept" @click="acceptRequest">
+            <button :disabled="isResponding" @click="acceptRequest">
                 <font-awesome-icon icon="fa-solid fa-circle-check" style="color: rgb(99, 230, 190);"/>
             </button>
-            <button class="reject" @click="rejectRequest">
+            <button :disabled="isResponding" @click="rejectRequest">
                 <font-awesome-icon icon="fa-solid fa-circle-xmark" style="color: rgb(228, 46, 46);"/>
             </button>   
         </div>    

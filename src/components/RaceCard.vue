@@ -5,7 +5,7 @@
     import { useAuth } from '../composables/auth.ts'
     import type { Race } from '../types/Race.ts';
     import type { League } from '../types/League.ts';
-import type { Driver } from '../types/Driver.ts';
+    import type { Driver } from '../types/Driver.ts';
 
     const props = defineProps<{
         race: Race;
@@ -27,6 +27,9 @@ import type { Driver } from '../types/Driver.ts';
     const raceFirst = ref<string | null>(null);
     const raceSecond = ref<string | null>(null);
     const raceThird = ref<string | null>(null);
+
+    const isSubmittingBet = ref(false);
+    const isSubmittingExtraPoints = ref(false);
         
     const isOwner = computed(() => {
         return user.value?.uid === props.league.ownerId;
@@ -173,8 +176,14 @@ import type { Driver } from '../types/Driver.ts';
             }
         }
 
-        await submitBet(props.league.id, raceSelected.value);
-        closeBetModal();
+        isSubmittingBet.value = true;
+
+        try {
+            await submitBet(props.league.id, raceSelected.value);
+            closeBetModal();
+        } finally {
+            isSubmittingBet.value = false;
+        }
     };
 
     async function submitBet(leagueId: string, race: Race) {
@@ -316,7 +325,9 @@ import type { Driver } from '../types/Driver.ts';
                             </option>
                         </select>
                     </div>
-                    <button type="submit">Place Bet</button>
+                    <button :disabled="isSubmittingBet" @click="handleSubmitBet">
+                        {{ isSubmittingBet ? 'Placing Bet...' : 'Place Bet' }}
+                    </button>
                     <button @click="closeBetModal">Cancel</button>
                 </form>
             </div>
@@ -332,7 +343,9 @@ import type { Driver } from '../types/Driver.ts';
                                 {{ driver.givenName }} {{ driver.familyName }}
                             </option>
                     </select> -->
-                    <button type="submit">Ok</button>
+                    <button :disabled="isSubmittingExtraPoints" @click="handleSubmitExtraPoints">
+                        {{ isSubmittingExtraPoints ? 'Submitting...' : 'Ok' }}
+                    </button>
                     <button @click="closeExtraPointsModal">Close</button>
                 </form>
             </div>
