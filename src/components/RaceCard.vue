@@ -4,18 +4,21 @@
     import { db } from "../firebase.ts";
     import { useAuth } from '../composables/auth.ts'
     import type { Race } from '../types/Race.ts';
+    import type { League } from '../types/League.ts';
+import type { Driver } from '../types/Driver.ts';
 
     const props = defineProps<{
         race: Race;
-        drivers: any[];
-        leagueId: string;
+        drivers: Driver[];
+        league: League;
     }>();
 
     const { user, authReady } = useAuth();
 
     const now = ref(Date.now());
     const showBetModal = ref(false);
-    const raceToBet = ref<Race | null>(null);
+    const showExtraPointsModal = ref(false);
+    const raceSelected = ref<Race | null>(null);
     const sprintPole = ref<string | null>(null);
     const sprintFirst = ref<string | null>(null);
     const sprintSecond = ref<string | null>(null);
@@ -23,7 +26,11 @@
     const racePole = ref<string | null>(null);
     const raceFirst = ref<string | null>(null);
     const raceSecond = ref<string | null>(null);
-    const raceThird = ref<string | null>(null);    
+    const raceThird = ref<string | null>(null);
+        
+    const isOwner = computed(() => {
+        return user.value?.uid === props.league.ownerId;
+    });
 
     setInterval(() => {
         now.value = Date.now()
@@ -42,7 +49,7 @@
 
     const openBetModal = async (race: Race) => {
         showBetModal.value = true;
-        raceToBet.value = race;
+        raceSelected.value = race;
 
         // Get the user bet if already made one 
         resetBetForm();
@@ -51,7 +58,7 @@
 
         const userId = user.value.uid;
         const raceId = `race_${race.round}`;
-        const entryRef = doc(db, "leagues", props.leagueId, "bets", raceId, "entries", userId);
+        const entryRef = doc(db, "leagues", props.league.id, "bets", raceId, "entries", userId);
         const entrySnap = await getDoc(entryRef);
 
         if (!entrySnap.exists()) return;
@@ -71,8 +78,19 @@
 
     const closeBetModal = () => {
         showBetModal.value = false;
-        raceToBet.value = null;
+        raceSelected.value = null;
         resetBetForm();
+    };
+
+    const openExtraPointsModal = (race: Race) => {
+        showExtraPointsModal.value = true;
+        raceSelected.value = race;
+    };
+
+    const closeExtraPointsModal = () => {
+        showExtraPointsModal.value = false;
+        raceSelected.value = null;
+
     };
 
     const raceTiming = computed(() => {
@@ -129,7 +147,7 @@
     }
 
     const handleSubmitBet = async () => {
-        if (!raceToBet.value) return;
+        if (!raceSelected.value) return;
 
         const racePodiumHasDuplicates = hasDuplicates([
             raceFirst.value,
@@ -142,7 +160,7 @@
             return;
         }
 
-        if (isSprintWeekend(raceToBet.value)) {
+        if (isSprintWeekend(raceSelected.value)) {
             const sprintPodiumHasDuplicates = hasDuplicates([
                 sprintFirst.value,
                 sprintSecond.value,
@@ -155,7 +173,7 @@
             }
         }
 
-        await submitBet(props.leagueId, raceToBet.value);
+        await submitBet(props.league.id, raceSelected.value);
         closeBetModal();
     };
 
@@ -222,6 +240,12 @@
             }, { merge: true });
         }
     }
+
+    const handleSubmitExtraPoints = async () => {
+        if (!raceSelected.value) return;
+
+        closeExtraPointsModal();
+    }
 </script>
 
 <template>
@@ -229,7 +253,7 @@
         <div v-if="showBetModal" class="modal-overlay" @click.self="closeBetModal">
             <div class="modal-content">
                 <form v-on:submit.prevent="handleSubmitBet">
-                    <div v-if="raceToBet !== null && isSprintWeekend(raceToBet)">
+                    <div v-if="raceSelected !== null && isSprintWeekend(raceSelected)">
                         <h2>Sprint Bet</h2>
                         <label for="sprintPole">Sprint Pole:</label>
                         <select required v-model="sprintPole" name="sprintPole">
@@ -297,6 +321,22 @@
                 </form>
             </div>
         </div>
+
+        <div v-else-if="showExtraPointsModal" class="modal-overlay" @click="closeExtraPointsModal">
+            <div class="modal-content">
+                <form v-on:submit.prevent="handleSubmitExtraPoints">
+                    <h2>Extra Points</h2>
+                    <!-- <select required v-model="racePole" name="racePole">
+                            <option disabled value="">Select driver</option>
+                            <option v-for="driver in drivers" :key="driver.driverId" :value="driver.driverId">
+                                {{ driver.givenName }} {{ driver.familyName }}
+                            </option>
+                    </select> -->
+                    <button type="submit">Ok</button>
+                    <button @click="closeExtraPointsModal">Close</button>
+                </form>
+            </div>
+        </div>
     </Teleport>
 
     <div class="race-card" :class="{locked: raceTiming.expired}">
@@ -315,6 +355,11 @@
         <div v-else>
             <font-awesome-icon icon="fa-solid fa-star" style="color: rgb(255, 212, 59);" />
             <span>NAME</span>
+            <div v-if="isOwner">
+                <button @click="openExtraPointsModal(race)">
+                    <font-awesome-icon icon="fa-solid fa-plus" style="color: rgb(31, 31, 31);" />
+                </button>
+            </div>
         </div>
     </div>
 </template>

@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { user, authReady } from './auth';
 
 type CurrentUserProfile = {
+    id: string;
     username: string;
     avatar?: string | null;
     };

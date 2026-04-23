@@ -277,7 +277,7 @@
 
                         <div v-else v-for="league in leagues" :key="league.id" class="league-card">
                             <RouterLink :to="{ name: 'League', params: { id: league.id }, query: { seasonYear: league.seasonYear } }">
-                                <h4>{{ league.name }} - Season {{ league.seasonYear }} • {{ league.createdBy }}</h4>
+                                <h4>{{ league.name }} - Season {{ league.seasonYear }} • {{ league.ownerUsername }}</h4>
                             </RouterLink>
                         </div>
                     </div>

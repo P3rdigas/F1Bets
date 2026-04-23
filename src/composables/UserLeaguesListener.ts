@@ -32,7 +32,7 @@ function startLeagueListeners(currentUid: string) {
                 id: docSnap.id,
                 name: data.league_name,
                 seasonYear: data.season_year,
-                createdBy: data.owner_username,
+                ownerUsername: data.owner_username,
             } as League;
         });
     });

@@ -1,12 +1,13 @@
 <script setup lang="ts">
     import { useRoute } from 'vue-router'
     import { ref, onMounted } from 'vue'
-    import { getDocs, collection, query, orderBy } from 'firebase/firestore';
+    import { doc, getDoc, getDocs, collection, query, orderBy } from 'firebase/firestore';
     import { db } from '../firebase.ts';
     import type { DriverStanding } from '../types/DriverStanding.ts';
     import type { ConstructorStanding } from '../types/ConstructorStanding.ts';
     import type { Race } from '../types/Race.ts';
     import type { Driver } from '../types/Driver.ts';
+    import type { League } from '../types/League.ts';
     import type { DriverStandingFirestore } from '../types/firestore/DriverStandingFirestore.ts';
     import type { ConstructorStandingFirestore } from '../types/firestore/ConstructorStandingFirestore.ts';
     import type { RaceFirestore } from '../types/firestore/RaceFirestore.ts';
@@ -16,37 +17,56 @@
     import RaceCard from '../components/RaceCard.vue';
 
     const route = useRoute();
-
-    const seasonYear = route.query.seasonYear as string;
     const leagueId = route.params.id as string;
 
+    const league = ref<League | null>(null);
+    const seasonYear = ref<number>();
     const driversStandings = ref<DriverStanding[]>([]);
     const constructorsStandings = ref<ConstructorStanding[]>([]);
     const races = ref<Race[]>([]);
     const drivers = ref<Driver[]>([]);
 
     async function loadData() {
-        // TODO: Throw error if seasonYear is not valid
-        if (!seasonYear) return;
+        if (!leagueId) return;
 
         try {
+            const leagueRef = doc(db, 'leagues', leagueId);
+            const leagueSnap = await getDoc(leagueRef);
+
+            if (!leagueSnap.exists()) {
+                throw new Error('League not found');
+            }
+
+            const leagueData = leagueSnap.data();
+            seasonYear.value = Number(leagueData.season_year);
+
+            league.value = {
+                id: leagueSnap.id,
+                name: leagueData.name,
+                seasonYear: leagueData.season_year,
+                ownerId: leagueData.owner_id,
+                ownerUsername: leagueData.owner_username,
+            };
+
+            // TODO: Get members of the league
+
             const driversQ = query(
-                collection(db, 'f1_seasons', seasonYear, 'drivers'),
+                collection(db, 'f1_seasons', String(seasonYear.value), 'drivers'),
                 orderBy('given_name', 'asc')
             )
 
             const racesQ = query(
-                collection(db, 'f1_seasons', seasonYear, 'races'),
+                collection(db, 'f1_seasons', String(seasonYear.value), 'races'),
                 orderBy('round', 'asc')
             );
 
             const driverStandingsQ = query(
-                collection(db, 'f1_seasons', seasonYear, 'driver_standings'),
+                collection(db, 'f1_seasons', String(seasonYear.value), 'driver_standings'),
                 orderBy('position', 'asc')
             );
 
             const constructorStandingsQ = query(
-                collection(db, 'f1_seasons', seasonYear, 'constructor_standings'),
+                collection(db, 'f1_seasons', String(seasonYear.value), 'constructor_standings'),
                 orderBy('position', 'asc')
             );
 
@@ -71,7 +91,7 @@
                 const data = docSnap.data() as RaceFirestore;
 
                 return {
-                    season: seasonYear,
+                    season: seasonYear.value,
                     round: data.round,
                     raceName: data.race_name,
                     weekendType: data.weekend_type,
@@ -144,10 +164,10 @@
 
             <div class="league-right">
                 <div class="league-right-box">
-                    <div v-if="races.length">
+                    <div v-if="races.length && league">
                         <h3>Calendar Season ({{ seasonYear }})</h3>
                         <div v-for="item in races" :key="item.round">
-                            <RaceCard :race="item" :drivers="drivers" :leagueId="leagueId"/>
+                            <RaceCard :race="item" :drivers="drivers" :league="league"/>
                         </div>
                     </div>
                 </div>

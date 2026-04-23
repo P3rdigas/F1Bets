@@ -1,7 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 
 export interface Race {
-    season: string;
+    season: number;
     round: number;
     raceName: string;
     weekendType: string;
