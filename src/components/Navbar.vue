@@ -6,15 +6,14 @@
     import { userFriendRequests } from '../composables/FriendsRequestListener.ts';
     import FriendInviteCard from './FriendInviteCard.vue';
     import LeagueInviteCard from './LeagueInviteCard.vue';
-    import { InviteType } from '../types/InviteType.ts';
-    import { userLeagueRequests } from '../composables/LeagueRequestListener.ts';
+    import { userLeagueInvites } from '../composables/LeagueInvitesListener.ts';
 
-    const { receivedRequests, sentRequests } = userFriendRequests();
-    const { leagueInvites } = userLeagueRequests();
+    const { friendRequests, receivedRequests, sentRequests } = userFriendRequests();
+    const { leagueInvites } = userLeagueInvites();
 
     // Computed para badges
     const leagueCount = computed(() => leagueInvites.value.length);
-    const totalFriendInvites = computed(() => receivedRequests.value.length + sentRequests.value.length);
+    const totalFriendInvites = computed(() => friendRequests.value.length);
 
     const logout = async () => {
         try {
@@ -42,7 +41,13 @@
                 </div>
                 <LeagueInviteCard 
                     v-for="invite in leagueInvites"
-                    v-bind="invite"
+                    :key="invite.id"
+                    :id="invite.id"
+                    :leagueId="invite.leagueId"
+                    :leagueSeasonYear="invite.leagueSeasonYear"
+                    :leagueName="invite.leagueName"
+                    :owner-id="invite.senderId"
+                    :owner-username="invite.senderUsername"
                 />
                 </div>
             </div>
@@ -50,38 +55,40 @@
             
             <div class="dropdown-container">
                 <button class="invite-button friend-button">
-                <font-awesome-icon icon="fa-solid fa-user-group" />
-                <span v-if="totalFriendInvites > 0" class="badge">{{ totalFriendInvites }}</span>
+                    <font-awesome-icon icon="fa-solid fa-user-group" />
+                    <span v-if="totalFriendInvites > 0" class="badge">{{ totalFriendInvites }}</span>
                 </button>
                 
                 <div class="dropdown friend-dropdown">
-                <div v-if="receivedRequests.length === 0 && sentRequests.length === 0" class="empty-state">
-                    No friend requests
-                </div>
-                
-                
-                <div v-if="sentRequests.length" class="request-section">
-                    <h4>Sent</h4>
-                    <FriendInviteCard 
-                    v-for="req in sentRequests" 
-                    :key="req.id"
-                    :id="req.id"
-                    :username="req.username"
-                    :type="InviteType.SENT"
-                    />
-                </div>
+                    <div v-if="totalFriendInvites === 0" class="empty-state">
+                        No friend requests
+                    </div>
+                    
+                    
+                    <div v-if="sentRequests.length" class="request-section">
+                        <h4>Sent</h4>
+                        <FriendInviteCard 
+                        v-for="req in sentRequests" 
+                        :key="req.id"
+                        :id=req.id
+                        :otherUserId=req.otherUserId
+                        :otherUsername=req.otherUsername
+                        :type=req.type
+                        />
+                    </div>
 
-                
-                <div v-if="receivedRequests.length" class="request-section">
-                    <h4>Received</h4>
-                    <FriendInviteCard 
-                    v-for="req in receivedRequests" 
-                    :key="req.id"
-                    :id="req.id"
-                    :username="req.username"
-                    :type="InviteType.RECEIVED"
-                    />
-                </div>
+                    
+                    <div v-if="receivedRequests.length" class="request-section">
+                        <h4>Received</h4>
+                        <FriendInviteCard 
+                        v-for="req in receivedRequests" 
+                        :key="req.id"
+                        :id=req.id
+                        :otherUserId=req.otherUserId
+                        :otherUsername=req.otherUsername
+                        :type=req.type
+                        />
+                    </div>
                 </div>
             </div>
         </div>    

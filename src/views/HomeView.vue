@@ -1,7 +1,7 @@
 <script setup lang="ts">
     import { ref } from 'vue';
     import { RouterLink } from "vue-router";
-    import { collection, addDoc, query, where, getDocs, limit , serverTimestamp } from "firebase/firestore";
+    import { collection, doc, getDoc, query, where, getDocs, limit , writeBatch, serverTimestamp } from "firebase/firestore";
     import { db } from '../firebase.ts'
     import { user } from '../composables/auth.ts';
     import { RequestStatus } from '../types/RequestStatus.ts';
@@ -10,6 +10,7 @@
     import { userLeagues } from '../composables/UserLeaguesListener.ts';
     import { userFriends } from '../composables/FriendsListener.ts';
     import { LeagueRoleType } from '../types/LeagueRoleType.ts';
+    import { InviteType } from '../types/InviteType.ts';
 
     const { leagues } = userLeagues();
     const { friends } = userFriends();
@@ -41,40 +42,83 @@
     };
 
     const confirmCreateLeague = async () => {
-        // Create the league
-        const leagueDocRef = await addDoc(collection(db, 'leagues'), {
-            season_year: new Date().getFullYear(),
+        if (!user.value?.uid) return;
+
+        const ownerId = user.value.uid;
+
+        const ownerRef = doc(db, "users", ownerId);
+        const ownerSnap = await getDoc(ownerRef);
+
+        if (!ownerSnap.exists()) return;
+
+        const ownerData = ownerSnap.data();
+        const seasonYear = new Date().getFullYear();
+
+        const leagueRef = doc(collection(db, "leagues"));
+        const batch = writeBatch(db);
+
+        batch.set(leagueRef, {
+            season_year: seasonYear,
             name: leagueName.value,
-            created_by: user.value?.uid,
-            created_at: serverTimestamp()
+            owner_id: ownerId,
+            owner_username: ownerData.username,
+            created_at: serverTimestamp(),
         });
 
-        // Add the owner to the league memberships
-        await addDoc(collection(db, 'league_memberships'), {
-            league_id: leagueDocRef.id,
-            user_id: user.value?.uid,
+        batch.set(doc(db, "leagues", leagueRef.id, "members", ownerId), {
+            username: ownerData.username,
             role: LeagueRoleType.OWNER,
             total_points: 0,
-            joined_at: serverTimestamp()
+            joined_at: serverTimestamp(),
         });
 
-        // Send league invites to selected friends
-        for (const friendId of selectedFriends.value) {
-            await addDoc(collection(db, 'league_invites'), {
-                created_at: serverTimestamp(),
-                league_id: leagueDocRef.id,
-                receiver_id: friendId,
-                responded_at: null,
-                sender_id: user.value?.uid,
-                status: RequestStatus.PENDING
-            });
-        }    
+        batch.set(doc(db, "users", ownerId, "leagues", leagueRef.id), {
+            league_name: leagueName.value,
+            season_year: seasonYear,
+            owner_id: ownerId,
+            owner_username: ownerData.username,
+            role: LeagueRoleType.OWNER,
+            joined_at: serverTimestamp(),
+        });
 
+        for (const friendId of selectedFriends.value) {
+            const friendRef = doc(db, "users", friendId);
+            const friendSnap = await getDoc(friendRef);
+
+            if (!friendSnap.exists()) continue;
+
+            const friendData = friendSnap.data();
+
+            const leagueInviteRef = doc(collection(db, "leagues", leagueRef.id, "invites"));
+            const inviteId = leagueInviteRef.id;
+
+            batch.set(leagueInviteRef, {
+                league_id: leagueRef.id,
+                receiver_id: friendId,
+                receiver_username: friendData.username,
+                status: RequestStatus.PENDING,
+                created_at: serverTimestamp(),
+                responded_at: null,
+            });
+
+            batch.set(doc(db, "users", friendId, "league_invites", inviteId), {
+                league_id: leagueRef.id,
+                league_name: leagueName.value,
+                season_year: seasonYear,
+                sender_id: ownerId,
+                sender_username: ownerData.username,
+                status: RequestStatus.PENDING,
+                created_at: serverTimestamp(),
+                responded_at: null,
+            });
+        }
+
+        await batch.commit();
         closeModal();
     }
 
     const friendRequest = async () => {
-        if (!user.value) {
+        if (!user.value?.uid) {
             alert("Log in first!");
             return;
         }
@@ -82,73 +126,97 @@
         const currentUid = user.value.uid;
 
         const q = query(
-            collection(db, 'users'),
-            where('username', '==', friendName.value),
+            collection(db, "users"),
+            where("username", "==", friendName.value),
             limit(1)
         );
 
         const snap = await getDocs(q);
-            
+
         if (snap.empty) {
             alert("Username not found!");
             return;
-            // throw new Error("Username not found!");
         }
 
-        const targetUid = snap.docs[0]!.id;
+        const targetDoc = snap.docs[0]!;
+        const targetUid = targetDoc.id;
 
         if (targetUid === currentUid) {
             alert("You can't add yourself!");
             return;
         }
 
-        // TODO: optimize double checking
-        const existingFriendQ1 = query(
-            collection(db, 'friends'),
-            where('sender_id', '==', currentUid),
-            where('receiver_id', '==', targetUid),
+        const currentUserRef = doc(db, "users", currentUid);
+        const currentUserSnap = await getDoc(currentUserRef);
+
+        if (!currentUserSnap.exists()) return;
+
+        const existingFriendRef = doc(db, "users", currentUid, "friends", targetUid);
+        const existingFriendSnap = await getDoc(existingFriendRef);
+
+        if (existingFriendSnap.exists()) {
+            alert("You are already friends!");
+            return;
+        }
+
+        const sentRequestsQ = query(
+            collection(db, "users", currentUid, "friend_requests"),
+            where("other_user_id", "==", targetUid),
+            where("status", "==", RequestStatus.PENDING),
             limit(1)
         );
 
-        const existingFriendSnap1 = await getDocs(existingFriendQ1);
+        const sentRequestsSnap = await getDocs(sentRequestsQ);
 
-        if (!existingFriendSnap1.empty) {
-            if (existingFriendSnap1.docs[0]!.data().status === RequestStatus.PENDING) {
-                alert("Friend request already sent!");
-                return;
-            } else if (existingFriendSnap1.docs[0]!.data().status === RequestStatus.ACCEPTED) {
-                alert("You are already friends!");
-                return;
-            }
+        if (!sentRequestsSnap.empty) {
+            alert("Friend request already sent!");
+            return;
         }
 
-        const existingFriendQ2 = query(
-            collection(db, 'friends'),
-            where('sender_id', '==', targetUid),
-            where('receiver_id', '==', currentUid),
+        const receivedRequestsQ = query(
+            collection(db, "users", currentUid, "friend_requests"),
+            where("other_user_id", "==", targetUid),
+            where("direction", "==", InviteType.RECEIVED),
+            where("status", "==", RequestStatus.PENDING),
             limit(1)
         );
 
-        const existingFriendSnap2 = await getDocs(existingFriendQ2);
+        const receivedRequestsSnap = await getDocs(receivedRequestsQ);
 
-        if (!existingFriendSnap2.empty) {
-            if (existingFriendSnap2.docs[0]!.data().status === RequestStatus.PENDING) {
-                alert("Friend request already sent!");
-                return;
-            } else if (existingFriendSnap2.docs[0]!.data().status === RequestStatus.ACCEPTED) {
-                alert("You are already friends!");
-                return;
-            }
+        if (!receivedRequestsSnap.empty) {
+            alert("This user already sent you a friend request!");
+            return;
         }
 
-        // Add friend request
-        await addDoc(collection(db, 'friends'), {
-            created_at: serverTimestamp(),
-            receiver_id: targetUid,
-            responded_at: null,
-            sender_id: currentUid,
+        const targetData = targetDoc.data();
+        const currentUserData = currentUserSnap.data();
+
+        const senderRequestRef = doc(collection(db, "users", currentUid, "friend_requests"));
+        const requestId = senderRequestRef.id;
+
+        const receiverRequestRef = doc(db, "users", targetUid, "friend_requests", requestId);
+
+        const batch = writeBatch(db);
+
+        batch.set(senderRequestRef, {
+            other_user_id: targetUid,
+            other_username: targetData.username,
+            direction: InviteType.SENT,
             status: RequestStatus.PENDING,
+            created_at: serverTimestamp(),
+            responded_at: null,
         });
+
+        batch.set(receiverRequestRef, {
+            other_user_id: currentUid,
+            other_username: currentUserData.username,
+            direction: InviteType.RECEIVED,
+            status: RequestStatus.PENDING,
+            created_at: serverTimestamp(),
+            responded_at: null,
+        });
+
+        await batch.commit();
     }   
 </script>
 

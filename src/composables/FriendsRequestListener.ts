@@ -1,109 +1,69 @@
-import { ref, onBeforeUnmount, watchEffect } from 'vue';
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, type Unsubscribe } from 'firebase/firestore';
+import { ref, computed, onBeforeUnmount, watchEffect } from 'vue';
+import { collection, query, where, orderBy, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../firebase.ts';
 import { user } from './auth.ts';
+import { InviteType } from '../types/InviteType.ts';
 import { RequestStatus } from '../types/RequestStatus.ts';
 import type { FriendRequestsResponse } from '../types/FriendRequestsResponse.ts';
+import type { FriendRequestFirestore } from '../types/firestore/FriendRequestFirestore.ts';
 
-const receivedRequests = ref<FriendRequestsResponse[]>([]);
-const sentRequests = ref<FriendRequestsResponse[]>([]);
+const friendRequests = ref<FriendRequestsResponse[]>([]);
 
-let unsubscribeReceived: Unsubscribe | null = null;
-let unsubscribeSent: Unsubscribe | null = null;
+const receivedRequests = computed(() =>
+    friendRequests.value.filter(req => req.type === InviteType.RECEIVED)
+);
 
+const sentRequests = computed(() =>
+    friendRequests.value.filter(req => req.type === InviteType.SENT)
+);
+
+let unsubscribeRequests: Unsubscribe | null = null;
 
 function stopListeners() {
-  if (unsubscribeReceived) {
-    unsubscribeReceived();
-    unsubscribeReceived = null;
-  }
+    if (unsubscribeRequests) {
+        unsubscribeRequests();
+        unsubscribeRequests = null;
+    }
 
-  if (unsubscribeSent) {
-    unsubscribeSent();
-    unsubscribeSent = null;
-  }
-
-  receivedRequests.value = [];
-  sentRequests.value = [];
+    friendRequests.value = [];
 }
 
-// TODO: Refactor code like in FriendsListener to avoid duplication
-function startListeners(currentUid: string) {
-  const baseCol = collection(db, 'friends');
-
-  const receivedQ = query(
-    baseCol,
-    where('receiver_id', '==', currentUid),
-    where('status', '==', RequestStatus.PENDING),
-    orderBy('created_at', 'desc'),
-  );
-
-  unsubscribeReceived = onSnapshot(receivedQ, async (snapshot) => {  
-    const requests = await Promise.all(
-      snapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data();
-        const userRef = doc(db, 'users', data.sender_id);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          return {
-            id: docSnap.id,
-            username: userSnap.data().username as string,
-          } as FriendRequestsResponse;
-        }
-
-        return undefined;
-      })
+function startListener(currentUid: string) {
+    const q = query(
+        collection(db, 'users', currentUid, 'friend_requests'),
+        where('status', '==', RequestStatus.PENDING),
+        orderBy('other_username', 'asc'),
     );
 
-    receivedRequests.value = requests.filter((req): req is FriendRequestsResponse => req !== undefined);;
-  });
+    unsubscribeRequests = onSnapshot(q, (snapshot) => {
+        friendRequests.value = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() as FriendRequestFirestore;
 
-  const sentQ = query(
-    baseCol,
-    where('sender_id', '==', currentUid),
-    where('status', '==', RequestStatus.PENDING),
-    orderBy('created_at', 'desc'),
-  );
-
-  unsubscribeSent = onSnapshot(sentQ, async (snapshot) => {
-    const requests = await Promise.all(
-      snapshot.docs.map(async (docSnap) => {
-        const data = docSnap.data();
-        const userRef = doc(db, 'users', data.receiver_id);
-        const userSnap = await getDoc(userRef);
-       
-        if (userSnap.exists()) {
-          return {
+        return {
             id: docSnap.id,
-            username: userSnap.data().username as string,
-          } as FriendRequestsResponse;
-        }
-
-        return undefined;
-      })
-    );
-    
-    sentRequests.value = requests.filter((req): req is FriendRequestsResponse => req !== undefined);
-  });
+            otherUserId: data.other_user_id,
+            otherUsername: data.other_username,
+            type: data.direction,
+        } as FriendRequestsResponse;
+        });
+    });
 }
 
 export function userFriendRequests() {
-  watchEffect(() => {
-    const current = user.value;
-    stopListeners();
+    watchEffect(() => {
+        const current = user.value;
+        stopListeners();
 
-    if (current?.uid) {
-      startListeners(current.uid);
-    }
-  });
+        if (current?.uid) {
+            startListener(current.uid);
+        }
+    });
 
-  onBeforeUnmount(() => {
-    stopListeners();
-  });
+    onBeforeUnmount(stopListeners);
 
-  return {
-    receivedRequests,
-    sentRequests,
-  };
+    return {
+        friendRequests,
+        receivedRequests,
+        sentRequests,
+    };
 }
