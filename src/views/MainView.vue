@@ -48,7 +48,7 @@
             return;
         }
 
-        const username = registerForm.value.username.trim().toLowerCase();
+        const username = registerForm.value.username.trim();
         const email = registerForm.value.email.trim();
         const password = registerForm.value.password;
 
