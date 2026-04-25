@@ -108,149 +108,275 @@
             isRegistering.value = false;
         }
     };
+
+    const beforeEnter = (el: Element) => {
+        const element = el as HTMLElement;
+        element.style.height = '0';
+        element.style.opacity = '0';
+    };
+
+    const enter = (el: Element) => {
+        const element = el as HTMLElement;
+
+        element.style.transition = 'height 0.35s ease, opacity 0.25s ease, transform 0.25s ease';
+        element.style.height = element.scrollHeight + 'px';
+        element.style.opacity = '1';
+        element.style.transform = 'translateY(0)';
+    };
+
+    const afterEnter = (el: Element) => {
+        const element = el as HTMLElement;
+        element.style.height = 'auto';
+    };
+
+    const beforeLeave = (el: Element) => {
+        const element = el as HTMLElement;
+        element.style.height = element.scrollHeight + 'px';
+        element.style.opacity = '1';
+        element.style.transform = 'translateY(0)';
+    };
+
+    const leave = (el: Element) => {
+        const element = el as HTMLElement;
+        void element.offsetHeight;
+        element.style.transition = 'height 0.3s ease, opacity 0.2s ease, transform 0.2s ease';
+        element.style.height = '0';
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(-8px)';
+    };
 </script>
 
 <template>
-    <div class="home">
-        <div class="box">
-
-            <div class="tab-switcher" :class="{ active: isLogin }">
-                <button class="tab-btn" @click="isLogin = true">Login</button>
-                <button class="tab-btn" @click="isLogin = false">Register</button>
+    <div class="main">
+        <div class="main-box">
+            <div class="main-header">
+                <h1>Welcome to F1 Bets</h1>
+                <p>Sign in or create an account to manage your podium picks and compete with friends</p>
             </div>
 
-            <!-- Login Form (default) -->
-            <form v-if="isLogin" class="auth-form" v-on:submit.prevent="submitLogin">
-                <input v-model="loginForm.email" type="email" placeholder="Email" required />
-                <input v-model="loginForm.password" type="password" placeholder="Password" required />
-                <button type="submit" :disabled="isLoggingIn">
-                    {{ isLoggingIn ? 'Logging in...' : 'Login' }}
-                </button>
-            </form>
+            <div class="switch-button">
+                <span class="active" :style="{ left: isLogin ? '0' : '50%' }"></span>
 
-            <!-- Register Form -->
-            <form v-else class="auth-form" v-on:submit.prevent="submitRegister">
-                <input v-model="registerForm.email" type="email" placeholder="Email" required />
-                <input v-model="registerForm.username" type="text" placeholder="Username" required />
-                <input v-model="registerForm.password" type="password" placeholder="Password" required />
-                <input v-model="registerForm.confirmPassword" type="password" placeholder="Confirm Password" required />
-                <!-- <input type="file" placeholder="Avatar" /> -->
-                <button type="submit" :disabled="isRegistering">
-                    {{ isRegistering ? 'Registering...' : 'Register' }}
+                <button type="button" class="switch-button-case left" :class="{ 'active-case': isLogin }" @click="isLogin = true">
+                    LOGIN
                 </button>
-            </form>
+
+                <button type="button" class="switch-button-case right" :class="{ 'active-case': !isLogin }" @click="isLogin = false">
+                    REGISTER
+                </button>
+            </div>
+
+            <Transition
+                name="form-height"
+                mode="out-in"
+                @before-enter="beforeEnter"
+                @enter="enter"
+                @after-enter="afterEnter"
+                @before-leave="beforeLeave"
+                @leave="leave"
+            >
+                <!-- Login Form (default) -->
+                <form v-if="isLogin" class="auth-form" v-on:submit.prevent="submitLogin">
+                    <input v-model="loginForm.email" type="email" placeholder="Email" required />
+                    <input v-model="loginForm.password" type="password" placeholder="Password" required />
+                    <button type="submit" :disabled="isLoggingIn">
+                        {{ isLoggingIn ? 'LOGGING IN...' : 'LOGIN' }}
+                    </button>
+                </form>
+
+                <!-- Register Form -->
+                <form v-else class="auth-form" v-on:submit.prevent="submitRegister">
+                    <input v-model="registerForm.email" type="email" placeholder="Email" required />
+                    <input v-model="registerForm.username" type="text" placeholder="Username" required />
+                    <input v-model="registerForm.password" type="password" placeholder="Password" required />
+                    <input v-model="registerForm.confirmPassword" type="password" placeholder="Confirm Password" required />
+                    <!-- <input type="file" placeholder="Avatar" /> -->
+                    <button type="submit" :disabled="isRegistering">
+                        {{ isRegistering ? 'REGISTERING...' : 'REGISTER' }}
+                    </button>
+                </form>
+            </Transition>
         </div>
     </div>
 </template>
 
 <style scoped>
-    .home {
-        background-image: url('/images/home-hero.png'); 
-        background-size: cover;
+    .main {
+        position: relative;
         min-height: 100vh;
-        text-align: center;
         display: flex;
         align-items: center;
+        justify-content: flex-end;
+        text-align: center;
+        padding-right: 7.5vw;
     }
 
-    .box {
-        height: 60vh;
+    .main::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url('/images/home-hero.png'); 
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: 90% 0%;
+        transform: scaleX(-1);
+        transform-origin: center;
+        z-index: 0;
+    }
+
+    .main-box {
+        position: relative;
+        z-index: 1;
         width: 30vw;
-        background: rgba(255, 255, 255, 0.95);
-        margin-left: 7.5vw;
+        min-height: 35vh;
+        height: auto;
+        background: rgba(214, 206, 198, 0.5);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 5%;
         box-shadow: 
             0 30px 60px rgba(0, 0, 0, 0.25),
             0 15px 30px rgba(0, 0, 0, 0.15);
-        padding: 2rem;
         display: flex;
         flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding-bottom: 2.5%;
     }
 
-    .tab-switcher {
+    .main-header {
+        width: 65%;
         display: flex;
-        margin-bottom: 2rem;
-        border-radius: 50px;
-        overflow: hidden;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 5%;
+    }
+
+    .main-header h1 {
+        padding-bottom: 7.5%;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: clamp(2rem, 2.2vw, 2.8rem);
+        line-height: 1;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: #f9f7f4;
+        text-shadow:
+            0 2px 6px rgba(0, 0, 0, 0.5),
+            0 0 1px rgba(0, 0, 0, 0.5);
+    }
+
+    .main-header p {
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        font-size: 0.9rem;
+        line-height: 1.45;
+        color: var(--f1-dark-grey);
+    }
+
+    .switch-button {
+        width: 65%;
+        height: 48px;
         position: relative;
-        background: var(--f1-dark-grey);
+        display: flex;
+        align-items: center;
+        background-color: var(--f1-dark-grey);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 2rem;
     }
 
-    /* 🔥 Red diagonal overlay */
-    .tab-switcher::before {
-        content: "";
+    .switch-button .active {
         position: absolute;
-        inset: 0;
+        inset: 0 auto 0 0;
+        width: 50%;
+        height: 100%;
         background: var(--f1-red);
-        clip-path: polygon(0 0, 50% 0, 65% 100%, 0% 100%);
-        transition: clip-path 0.6s ease;
+        border-radius: inherit;
+        transition: left 0.3s ease;
+        z-index: 0;
+        box-shadow: 0 0 0 1px var(--f1-red) inset;
     }
 
-    /* When register is active → move diagonal */
-    .tab-switcher:not(.active)::before {
-        clip-path: polygon(35% 0, 100% 0, 100% 100%, 50% 100%);
-    }
-
-    .tab-btn {
+    .switch-button-case {
         flex: 1;
-        padding: 1rem 0;
+        height: 100%;
         border: none;
         background: transparent;
-        font-size: 1.1rem;
-        font-weight: 600;
+        color: white;
+        font-size: 1rem;
+        font-weight: 700;
         cursor: pointer;
+        position: relative;
         z-index: 1;
-        transition: color 0.4s ease;
-        color: #aaa;
+        transition: color 0.3s ease;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        letter-spacing: 0.01em;
     }
 
-    .tab-btn:first-child {
+    .switch-button-case:focus {
+        outline: none;
+    }
+
+    .switch-button-case.left.active-case,
+    .switch-button-case.right.active-case {
         color: white;
     }
 
-    .tab-switcher:not(.active) .tab-btn:first-child {
-        color: #aaa;
+    .switch-button-case.left:not(.active-case),
+    .switch-button-case.right:not(.active-case) {
+        color: rgba(255, 255, 255, 0.7);
     }
 
-    .tab-switcher:not(.active) .tab-btn:last-child {
-        color: white;
+    .switch-button-case.left:not(.active-case):hover,
+    .switch-button-case.right:not(.active-case):hover {
+        color: rgba(255, 255, 255, 0.95);
     }
 
     .auth-form {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        width: 65%;
+        gap: 1rem;
     }
 
     .auth-form input {
         padding: 1rem;
         border: 2px solid #e1e5e9;
         border-radius: 12px;
-        font-size: 1rem;
         transition: all 0.3s ease;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
     }
 
     .auth-form input:focus {
         outline: none;
-        border-color: #007bff;
+        border-color: var(--f1-dark-grey);
         box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
     }
 
     .auth-form button {
         padding: 1.2rem;
-        background: linear-gradient(135deg, #007bff, #0056b3);
+        background: linear-gradient(135deg, var(--f1-red-light) 0%, var(--f1-red) 45%, var(--f1-red-dark) 100%);
         color: white;
         border: none;
         border-radius: 12px;
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-family: var(--font-f1);
+        font-size: 1.25rem;
+        font-weight: var(--font-f1-bold);
+        letter-spacing: 0.01em;
         cursor: pointer;
         transition: all 0.3s ease;
     }
 
     .auth-form button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(0,123,255,0.3);
+        box-shadow: 0 10px 20px rgba(255, 24, 1, 0.3);
+    }
+
+    .form-height-enter-active,
+    .form-height-leave-active {
+        overflow: hidden;
     }
 </style>

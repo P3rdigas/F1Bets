@@ -1,4 +1,24 @@
+@font-face {
+    font-family: 'Formula1';
+    src: url('./fonts/Formula1-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Formula1';
+    src: url('./fonts/Formula1-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+
 :root {
     --f1-red: #FF1801;
+    --f1-red-light: #ff3b26;
+    --f1-red-dark: #cc1200;
     --f1-dark-grey: #11202A;
+
+    --font-f1: 'Formula1', sans-serif;
+    --font-f1-regular: 400;
+    --font-f1-bold: 700;
 }
