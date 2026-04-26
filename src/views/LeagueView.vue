@@ -100,7 +100,6 @@
                 } as Race;
             });
             
-
             driversStandings.value = driverStandingsSnap.docs.map(docSnap => {
                 const data = docSnap.data() as DriverStandingFirestore;
 

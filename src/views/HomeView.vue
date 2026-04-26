@@ -322,6 +322,7 @@
         height: 100vh;
         display: flex;
         flex-direction: column;
+        background-color: var(--f1-dark-grey);
     }
 
     .home-wrapper {

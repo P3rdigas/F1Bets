@@ -12,6 +12,40 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'KHInterference';
+    src: url('./fonts/KHInterference-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'KHInterference';
+    src: url('./fonts/KHInterference-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'KHInterference';
+    src: url('./fonts/KHInterference-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Stilu';
+    src: url('./fonts/Stilu-Regular.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Stilu';
+    src: url('./fonts/Stilu-Bold.otf') format('opentype');
+    font-weight: 800;
+    font-style: normal;
+}
+
 :root {
     --f1-red: #FF1801;
     --f1-red-light: #ff3b26;
@@ -21,4 +55,14 @@
     --font-f1: 'Formula1', sans-serif;
     --font-f1-regular: 400;
     --font-f1-bold: 700;
+
+    --font-khinterference: 'KHInterference', sans-serif;
+    --font-khinterference-light: 300;
+    --font-khinterference-regular: 400;
+    --font-khinterference-bold: 700;
+
+    /* Similar to Apax TAG Heuer*/
+    --font-stilu: 'Stilu', sans-serif;
+    --font-stilu-regular: 500;
+    --font-stilu-bold: 800;
 }
