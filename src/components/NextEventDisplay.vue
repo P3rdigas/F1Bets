@@ -334,9 +334,7 @@
     }
 
     .ned-r-left {
-        /* width: 80%; */
         height: 100%;
-        /* background-color: purple; */
         display: flex;
         flex-direction: column;
         justify-content: center;
