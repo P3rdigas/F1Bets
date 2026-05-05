@@ -272,8 +272,8 @@
         width: 100vw;
         min-height: 6.25vh;
         display: flex;
-        border-top: 1px solid #5f5f5f;
-        border-bottom: 1px solid #5f5f5f;
+        border-top: 1px solid var(--f1-light-grey);
+        border-bottom: 1px solid var(--f1-light-grey);
         color: white;
 
         --ned-padding: 2.5vw;

@@ -101,21 +101,73 @@
 <template>
     <div class="invite">
         <div v-if="type === InviteType.SENT" class="sent">
-            <p class="username">{{otherUsername}}</p>
-            <p class="pending">Pending...</p>
+            <span>● {{otherUsername}} - Pending...</span>
         </div>
         <div v-else class="received">
-            <p class="username">{{otherUsername}}</p>
-            <button :disabled="isResponding" @click="acceptRequest">
-                <font-awesome-icon icon="fa-solid fa-circle-check" style="color: rgb(99, 230, 190);"/>
-            </button>
-            <button :disabled="isResponding" @click="rejectRequest">
-                <font-awesome-icon icon="fa-solid fa-circle-xmark" style="color: rgb(228, 46, 46);"/>
-            </button>   
+            <span>● {{otherUsername}}</span>
+
+            <div class="actions">
+                <button :disabled="isResponding" @click="acceptRequest">
+                    <font-awesome-icon icon="fa-solid fa-check" />
+                </button>
+                <button :disabled="isResponding" @click="rejectRequest">
+                    <font-awesome-icon icon="fa-solid fa-xmark" />
+                </button>
+            </div>
         </div>    
     </div>
 </template>
 
 <style scoped>
+
+    .invite {
+        width: 100%;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 0.65rem;
+        color: white;
+    }
+
+    .sent,
+    .received {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: 2rem;
+    }
+
+    .received {
+        justify-content: space-between;
+    }
+
+    .received .actions {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-left: auto;
+    }
+
+    .received button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--f1-light-grey);
+        background: transparent;
+        border: 1px solid var(--f1-light-grey);
+        border-radius: 999px;
+        cursor: pointer;
+    }
+
+    .received button:hover {
+        color: var(--f1-red);
+        border-color: var(--f1-red);
+    }
+
+    .received button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
     
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { ref, computed } from 'vue';
+    import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
     import { signOut } from 'firebase/auth';
     import { auth } from '../firebase.ts';
     import router from '../router/index.ts';
@@ -12,10 +12,42 @@
     const { leagueInvites } = userLeagueInvites();
 
     // Computed para badges
-    const leagueCount = computed(() => leagueInvites.value.length);
-    const totalFriendInvites = computed(() => friendRequests.value.length);
+    const leagueInvitesCount = computed(() => leagueInvites.value.length);
+    const friendInvitesCount = computed(() => friendRequests.value.length);
 
     const isLoggingOut = ref(false);
+
+    const openDropdown = ref<'league' | 'friend' | null>(null);
+
+    const toggleDropdown = (type: 'league' | 'friend') => {
+        openDropdown.value = openDropdown.value === type ? null : type;
+    };
+
+    const closeDropdown = () => {
+        openDropdown.value = null;
+    };
+
+    const leagueDropdownRef = ref<HTMLElement | null>(null);
+    const friendDropdownRef = ref<HTMLElement | null>(null);
+
+    const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as Node;
+
+        const clickedInsideLeague = leagueDropdownRef.value?.contains(target) ?? false;
+        const clickedInsideFriend = friendDropdownRef.value?.contains(target) ?? false;
+
+        if (!clickedInsideLeague && !clickedInsideFriend) {
+            closeDropdown();
+        }
+    };
+
+    onMounted(() => {
+        document.addEventListener('click', handleClickOutside);
+    });
+
+    onBeforeUnmount(() => {
+        document.removeEventListener('click', handleClickOutside);
+    });
 
     const logout = async () => {
         isLoggingOut.value = true;
@@ -33,43 +65,53 @@
 
 <template>
     <div class="navbar-wrapper">
-        <!-- TODO: PUT NEXT CODE WITH BETTER CSS -->
         <div class="invites-section">
-            <div class="dropdown-container">
-                <button class="invite-button league-button">
-                    <font-awesome-icon icon="fa-solid fa-inbox" />
-                    <span v-if="leagueCount > 0" class="badge">{{ leagueCount }}</span>
+            <div ref="leagueDropdownRef" class="invite-menu">
+                <button class="invite-button" title="League Invites" @click.stop="toggleDropdown('league')">
+                    <font-awesome-icon class="nav-icon" icon="fa-solid fa-flag-checkered" />
+                    <span v-if="leagueInvitesCount > 0" class="badge">{{ leagueInvitesCount > 99 ? '99+' : leagueInvitesCount }}</span>
                 </button>
                 
-                <div class="dropdown league-dropdown">
-                <div v-if="leagueInvites.length === 0" class="empty-state">
-                    No league invites
-                </div>
-                <LeagueInviteCard 
-                    v-for="invite in leagueInvites"
-                    :key="invite.id"
-                    :id="invite.id"
-                    :leagueId="invite.leagueId"
-                    :leagueSeasonYear="invite.leagueSeasonYear"
-                    :leagueName="invite.leagueName"
-                    :owner-id="invite.senderId"
-                    :owner-username="invite.senderUsername"
-                />
+                <div v-if="openDropdown === 'league'" class="dropdown league-dropdown" @click.stop>
+                    <div class="dropdown-header">
+                        <h4>League invites</h4>
+                        <button class="close-dropdown" @click="closeDropdown">
+                            <font-awesome-icon icon="fa-solid fa-xmark" class="nav-icon"/>
+                        </button>
+                    </div>
+                    <div v-if="leagueInvites.length === 0" class="empty-state">
+                        No league invites
+                    </div>
+                    <LeagueInviteCard 
+                        v-for="invite in leagueInvites"
+                        :key="invite.id"
+                        :id="invite.id"
+                        :leagueId="invite.leagueId"
+                        :leagueSeasonYear="invite.leagueSeasonYear"
+                        :leagueName="invite.leagueName"
+                        :owner-id="invite.senderId"
+                        :owner-username="invite.senderUsername"
+                    />
                 </div>
             </div>
 
-            
-            <div class="dropdown-container">
-                <button class="invite-button friend-button">
-                    <font-awesome-icon icon="fa-solid fa-user-group" />
-                    <span v-if="totalFriendInvites > 0" class="badge">{{ totalFriendInvites }}</span>
+            <div ref="friendDropdownRef" class="invite-menu">
+                <button class="invite-button" title="Friend Requests" @click.stop="toggleDropdown('friend')">
+                    <font-awesome-icon class="nav-icon" icon="fa-solid fa-user-group" />
+                    <span v-if="friendInvitesCount > 0" class="badge"> {{ friendInvitesCount > 99 ? '99+' : friendInvitesCount }}</span>
                 </button>
                 
-                <div class="dropdown friend-dropdown">
-                    <div v-if="totalFriendInvites === 0" class="empty-state">
+                <div v-if="openDropdown === 'friend'" class="dropdown friend-dropdown" @click.stop>
+                    <div class="dropdown-header">
+                        <h4>Friend requests</h4>
+                        <button class="close-dropdown" @click="closeDropdown">
+                            <font-awesome-icon icon="fa-solid fa-xmark" class="nav-icon"/>
+                        </button>
+                    </div>
+
+                    <div v-if="friendInvitesCount === 0" class="empty-state">
                         No friend requests
                     </div>
-                    
                     
                     <div v-if="sentRequests.length" class="request-section">
                         <h4>Sent</h4>
@@ -83,7 +125,6 @@
                         />
                     </div>
 
-                    
                     <div v-if="receivedRequests.length" class="request-section">
                         <h4>Received</h4>
                         <FriendInviteCard 
@@ -98,90 +139,116 @@
                 </div>
             </div>
         </div>    
-        <button :disabled="isLoggingOut" class="logout" @click="logout">{{isLoggingOut ? 'Logging out...' : 'Logout'}}</button>
+        <button :disabled="isLoggingOut" class="logout" title="Logout" @click="logout">
+            <font-awesome-icon class="nav-icon" icon="fa-solid fa-arrow-right-from-bracket" rotation=180 />
+        </button>
     </div>
 </template>
 
 <style scoped>
     .navbar-wrapper {
-        background-color: blue;
         width: 100vw;
         height: 5vh;
         display: flex;
         align-items: center;
         justify-content: flex-end;
-    }
 
-    .navbar-wrapper button {
-        margin-right: 1vw;
-        cursor: pointer;
+        --nav-padding: 2vw;
     }
 
     .invites-section {
         display: flex;
-        gap: 0.5rem;
+        gap: var(--nav-padding);
     }
 
-    .dropdown-container {
+    .invite-menu {
         position: relative;
         display: inline-block;
     }
 
-    .dropdown-container:hover .dropdown {
-        display: block;
-    }
-
     .invite-button {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-radius: 12px;
-        padding: 8px 16px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
+        position: relative;
+        background: transparent;
+        border: none;
     }
 
-    .invite-button:hover {
-        background: rgba(255,255,255,0.3);
-        border-color: rgba(255,255,255,0.5);
-        transform: translateY(-2px);
+    .nav-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--f1-light-grey);
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .nav-icon:hover {
+        color: var(--f1-red);
     }
 
     .badge {
-        background: #ef4444;
-        color: white;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        font-size: 12px;
-        display: flex;
+        position: absolute;
+        top: 0;
+        right: 0;
+        transform: translate(90%, -30%);
+        min-width: 18px;
+        height: 18px;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
+        padding: 0 5px;
+        background: var(--f1-red);
+        color: white;
+        border-radius: 999px;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 11px;
+        white-space: nowrap;
+        box-sizing: border-box;
+        z-index: 999;
     }
 
     .dropdown {
         position: absolute;
-        top: 100%;
-        right: 0;
-        background: white;
-        border-radius: 12px;
+        background: var(--f1-dark-grey);
         box-shadow: 0 20px 40px rgba(0,0,0,0.15);
         min-width: 350px;
+        max-width: 500px;
         max-height: 400px;
-        overflow-y: auto;
-        z-index: 1000;
-        border: 1px solid #e5e7eb;
-        /* margin-top: 8px; */  
-        display: none;
+        overflow: auto;
+        z-index: 999;
+        border: 2px solid var(--f1-light-grey);
+        margin-top: 8px;
+    }
+
+    .dropdown-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 3.5% 5%;
+        border-bottom: 1px solid var(--f1-light-grey);
+    }
+
+    .dropdown-header h4 {
+        font-family: var(--font-khinterference);
+        font-weight: var(--font-khinterference-regular);
+        color: white;
+    }
+
+    .close-dropdown {
+        background: transparent;
+        border: none;
+        cursor: pointer;
     }
 
     .league-dropdown {
-        right: -50px;
+        right: 0;
+    }
+
+    .league-dropdown :deep(.invite) {
+        padding: 12px 16px;
+    }
+
+    .league-dropdown :deep(.invite:last-child) {
+        border-bottom: none;
     }
 
     .friend-dropdown {
@@ -190,7 +257,7 @@
 
     .request-section {
         padding: 16px;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--f1-light-grey);
     }
 
     .request-section:last-child {
@@ -198,30 +265,25 @@
     }
 
     .request-section h4 {
-        margin: 0 0 12px 0;
-        font-size: 14px;
-        color: #6b7280;
-        font-weight: 600;
+        margin-bottom: 12px;
+        font-family: var(--font-khinterference);
+        font-weight: var(--font-khinterference-regular);
+        font-size: 0.85rem;
+        color: white;
     }
 
     .empty-state {
-        padding: 24px;
+        padding: var(--nav-padding);
         text-align: center;
-        color: #6b7280;
-        font-style: italic;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        color: white;
     }
 
     .logout {
-        background: rgba(239,68,68,0.2);
-        color: white;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-radius: 12px;
-        padding: 8px 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .logout:hover {
-        background: rgba(239,68,68,0.4);
+        background: transparent;
+        border: none;
+        margin-left: var(--nav-padding);
+        margin-right: 1vw;
     }
 </style>

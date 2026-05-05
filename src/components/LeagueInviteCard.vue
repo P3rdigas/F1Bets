@@ -99,19 +99,68 @@
 
 <template>
     <div class="invite">
-        <div class="received">
-            <p class="league-name">{{leagueName}}</p>
-            <p class="owner-username">{{ownerUsername}}</p>
+        <span>● {{leagueName}} - {{ownerUsername}}</span>
+
+        <div class="actions">
             <button :disabled="isResponding" @click="acceptRequest">
-                <font-awesome-icon icon="fa-solid fa-circle-check" style="color: rgb(99, 230, 190);"/>
+                <font-awesome-icon icon="fa-solid fa-check" />
             </button>
             <button :disabled="isResponding" @click="rejectRequest">
-                <font-awesome-icon icon="fa-solid fa-circle-xmark" style="color: rgb(228, 46, 46);"/>
-            </button>   
-        </div>    
+                <font-awesome-icon icon="fa-solid fa-xmark" />
+            </button>
+        </div>
     </div>
 </template>
 
 <style scoped>
+
+    .invite {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 2rem;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 0.65rem;
+        color: white;
+        gap: 0.5rem;
+    }
+
+    .invite span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .actions {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-left: auto;
+    }
+
+    .invite button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--f1-light-grey);
+        background: transparent;
+        border: 1px solid var(--f1-light-grey);
+        border-radius: 999px;
+        cursor: pointer;
+    }
+
+    .invite button:hover:not(:disabled) {
+        color: var(--f1-red);
+        border-color: var(--f1-red);
+    }
+
+    .invite button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
     
 </style>
