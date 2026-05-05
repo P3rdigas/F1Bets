@@ -99,7 +99,7 @@
 
 <template>
     <div class="invite">
-        <span>● {{leagueName}} - {{ownerUsername}}</span>
+        <span>● {{leagueName}} — {{ownerUsername}}</span>
 
         <div class="actions">
             <button :disabled="isResponding" @click="acceptRequest">

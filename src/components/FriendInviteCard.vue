@@ -101,7 +101,7 @@
 <template>
     <div class="invite">
         <div v-if="type === InviteType.SENT" class="sent">
-            <span>● {{otherUsername}} - Pending...</span>
+            <span>● {{otherUsername}} — Pending...</span>
         </div>
         <div v-else class="received">
             <span>● {{otherUsername}}</span>
