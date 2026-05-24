@@ -1,20 +1,64 @@
+// dependency https://flagicons.lipis.dev/
+import 'flag-icons/css/flag-icons.min.css';
+
 const countryAliasMap: Record<string, string> = {
-    usa: 'usa',
-    american: 'usa',
+	australia: 'au',
+    australian: 'au',
+
+    austria: 'at',
+
+	azerbaijan: 'az',
+
+	belgium: 'be',
+
+	brazil: 'br',
+
+    canada: 'ca',
+    canadian: 'ca',
+
+    china: 'cn',
+    chinese: 'cn',
+
+    japan: 'jp',
+    japanese: 'jp',
+
+	hungary: 'hu',
+
+	italy: 'it',
+
+	mexico: 'mx',
+
+    monaco: 'mc',
+    monegasque: 'mc',
+
+	netherlands: 'nl',
+
+	qatar: 'qa',
+
+	singapore: 'sg',
+
+    spain: 'es',
+    spanish: 'es',
+
+	uae: 'ae',
+
+    uk: 'gb',
+    british: 'gb',
+
+    usa: 'us',
+    american: 'us',
 }
 
-function normalizeCountryKey(value?: string | null): string | null {
-    if (!value) return null;
+function normalizeCountryCode(value?: string | null): string | null {
+  if (!value) return null;
 
-    const normalized = value.trim().toLowerCase();
+  const normalized = value.trim().toLowerCase();
 
-    return countryAliasMap[normalized] ?? null;
+  return countryAliasMap[normalized] ?? null;
 }
 
-export function getFlagSrc(value?: string | null): string {
-    const countryKey = normalizeCountryKey(value);
+export function getFlagClass(value?: string | null): string {
+  	const countryCode = normalizeCountryCode(value);
 
-    if (!countryKey) return '/flags/default.png';
-
-    return `/flags/${countryKey}.png`;
+	return countryCode ? `fi fi-${countryCode} fis` : 'fi fi-xx fis';
 }

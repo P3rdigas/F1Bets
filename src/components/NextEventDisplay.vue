@@ -5,7 +5,7 @@
     import tzLookup from 'tz-lookup';
     import type { Race } from '../types/Race.ts';
     import type { RaceFirestore } from '../types/firestore/RaceFirestore.ts';
-    import { getFlagSrc } from '../utils/flags.ts';
+    import { getFlagClass } from '../utils/flags.ts';
     import TagHeuer2026 from './clocks/TagHeuer2026.vue';
 
     type SessionKey = keyof Race['sessions'];
@@ -189,8 +189,8 @@
         return `${startDay} ${startMonth} – ${endDay} ${endMonth}`;
     });
 
-    const circuitFlagSrc = computed(() => {
-        return getFlagSrc(nextRaceData.value?.race.circuit.country);
+    const circuitFlagClass = computed(() => {
+        return getFlagClass(nextRaceData.value?.race.circuit.country);
     });
 
     const roundLocality = computed(() => nextRaceData.value?.race.circuit.locality ?? '--');
@@ -245,7 +245,8 @@
                 <p>{{ roundNumber }} | {{ roundDate }}</p>
             </div>
             <div class="ned-l-bottom">
-                <img class="ned-flag" :src="circuitFlagSrc">
+                <!-- <img class="ned-flag" :src="circuitFlagSrc"> -->
+                <span class="ned-flag" :class="circuitFlagClass" />
                 <p>{{ roundLocality }} - {{ nextSessionLabel }}  {{ timeUntilNextSession }}</p>
             </div>
         </div>
@@ -307,12 +308,9 @@
     }
 
     .ned-flag {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
-        object-fit: cover;
-        object-position: center;
-        transform: scale(1.18);
     }
 
     .ned-l-bottom p {
