@@ -245,8 +245,7 @@
                 <p>{{ roundNumber }} | {{ roundDate }}</p>
             </div>
             <div class="ned-l-bottom">
-                <!-- <img class="ned-flag" :src="circuitFlagSrc"> -->
-                <span class="ned-flag" :class="circuitFlagClass" />
+                <span class="ned-flag" :class="circuitFlagClass"></span>
                 <p>{{ roundLocality }} - {{ nextSessionLabel }}  {{ timeUntilNextSession }}</p>
             </div>
         </div>
