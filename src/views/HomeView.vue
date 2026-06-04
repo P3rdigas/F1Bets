@@ -244,58 +244,103 @@
             <div class="home-left">
                 <div class="home-left-box">
                     <div class="home-left-box-header">
-                        <h1>Leagues</h1>
-                        <button @click="createLeague">Create League</button>
+                        <h1>MY LEAGUES</h1>
                     </div>
 
                     <div class="home-left-box-content">
-                        <!-- TODO: Just a concept, implement final version -->
                         <Teleport to="body">
-                            <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModal">
-                                <div class="create-league-modal">
-                                <h2>Create New League</h2>
-                                
-                                <input 
-                                    v-model="leagueName" 
-                                    placeholder="League Name (e.g., F1 League 2026)"
-                                    class="league-input"
-                                />
-                                
-                                <!-- TODO: If no friends send a message -->
-                                <div class="friends-section">
-                                    <label>Invite Friends:</label>
-                                    <div class="friends-list">
-                                    <div 
-                                        v-for="friend in friends" 
-                                        :key="friend.id"
-                                        class="friend-item"
-                                        :class="{ selected: selectedFriends.includes(friend.id) }"
-                                        @click="toggleFriend(friend.id)"
-                                    >
-                                        {{ friend.username }}
+                            <Transition name="modal-fade">
+                                <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModal">
+                                    <div class="create-league-modal">
+                                        <div class="modal-top">
+                                            <div>
+                                                <h2>Create New League</h2>
+                                                <p>Choose a league name and invite your friends to compete.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="league-name">League name</label>
+                                                <input id="league-name" v-model="leagueName" type="text" placeholder="e.g. F1 League 2026" class="league-input"/>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label>Invite friends</label>
+
+                                                <div v-if="friends.length === 0" class="empty-friends">
+                                                    You don’t have any friends to invite yet.
+                                                </div>
+
+                                                <div v-else class="friends-list">
+                                                    <button
+                                                        v-for="friend in friends"
+                                                        :key="friend.id"
+                                                        type="button"
+                                                        class="friend-item"
+                                                        :class="{ selected: selectedFriends.includes(friend.id) }"
+                                                        @click="toggleFriend(friend.id)"
+                                                    >
+                                                        <span class="friend-name">{{ friend.username }}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-actions">
+                                            <button @click="closeModal" class="cancel" type="button">
+                                                Cancel
+                                            </button>
+
+                                            <button
+                                                @click="confirmCreateLeague"
+                                                :disabled="isCreatingLeague || !leagueName.trim()"
+                                                class="create"
+                                                type="button"
+                                            >
+                                                {{ isCreatingLeague ? 'Creating...' : 'Create League' }}
+                                            </button>
+                                        </div>
                                     </div>
-                                    </div>
                                 </div>
-                                
-                                <div class="modal-actions">
-                                    <button @click="closeModal" class="cancel">Cancel</button>
-                                    <button @click="confirmCreateLeague" :disabled="isCreatingLeague" class="create">
-                                        {{ isCreatingLeague ? 'Creating...' : 'Create League' }}
-                                    </button>
-                                </div>
-                                </div>
-                            </div>
+                            </Transition>
                         </Teleport>
 
-                        <div v-if="leagues.length === 0" class="no-leagues">
-                            No leagues yet. Create or join one!
+                        <div v-if="leagues.length === 0" class="no-leagues-wrapper">
+                            <div class="no-leagues">
+                                No leagues yet. Create or join one!
+                            </div>
                         </div>
 
-                        <div v-else v-for="league in leagues" :key="league.id" class="league-card">
-                            <RouterLink :to="{ name: 'League', params: { id: league.id }, query: { seasonYear: league.seasonYear } }">
-                                <h4>{{ league.name }} - Season {{ league.seasonYear }} • {{ league.ownerUsername }}</h4>
-                            </RouterLink>
+                        <div v-else class="home-leagues-list">
+                            <div v-for="league in leagues" class="home-leagues" :key="league.id">
+                                <RouterLink class="card" :to="{ name: 'League', params: { id: league.id }, query: { seasonYear: league.seasonYear } }">
+                                    <!-- TODO: Add league image -->
+                                    <div class="league-image">
+                                        <!-- <img class="league-image" :src="league.imageUrl || 'https://via.placeholder.com/150x100?text=League+Image'" alt="League Image" /> -->
+                                        <font-awesome-icon class="image" icon="fa-solid fa-trophy" />
+                                    </div>
+
+                                    <div class="content">
+                                        <div class="content-text">
+                                            <h3>{{ league.name }}</h3>
+                                            <div class="league-info">
+                                                <span>{{ league.seasonYear }} Season</span>
+                                                <span>Created By: {{ league.ownerUsername }}</span>
+                                                <span>{{ league.memberCount }} Members</span>
+                                            </div>
+                                        </div>
+
+                                        <font-awesome-icon icon="fa-solid fa-angle-right" />
+                                    </div>
+                                </RouterLink>
+                            </div>
                         </div>
+
+                        <button @click="createLeague" class="create-league">
+                            <font-awesome-icon icon="fa-solid fa-plus" />
+                            Create League
+                        </button>
                     </div>
                 </div>
             </div>
@@ -323,47 +368,198 @@
         display: flex;
         flex-direction: column;
         background-color: var(--f1-dark-grey);
+        overflow: hidden;
     }
 
     .home-wrapper {
         flex: 1;
         display: flex;
+        min-height: 0;
+        align-items: stretch;
     }
 
     .home-left {
-        background-color: brown;
-        width: 50%;
+        width: 60%;
         display: flex;
         justify-content: center;
+        min-height: 0;
     }
 
     .home-left-box {
-        width: 80%;
-        height: 50vh;
-        background-color: white;
-        border-radius: 2.5%;
+        width: 95%;
+        border-radius: 0.75rem;
+        border: 2px solid var(--f1-light-grey);
         margin-top: 3vh;
-        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        height: 85vh; /* Navbar + NextEventDisplay */
+        overflow: hidden;
     }
 
     .home-left-box-header {
-        width: 100%;
-        height: 15%;
+        flex-shrink: 0;
+        height: 10vh;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        background-color: aqua;
+        border-bottom: 2px solid var(--f1-light-grey);
+        padding: 2.5%;
+        color: white;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 1.1rem;
+        line-height: 1.5125rem;
     }
 
     .home-left-box-content {
-        /* flex: 1; */
-        overflow-y: auto;
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
         padding: 1vh;
+        overflow: hidden;
+    }
+
+    .no-leagues-wrapper {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .no-leagues {
+        color: var(--f1-light-grey);
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        font-size: 1rem;
+    }
+
+    .home-leagues-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1vh;
+        padding-right: 1%;
+
+        scrollbar-width: thin;
+        scrollbar-color: var(--f1-light-grey) transparent;
+    }
+
+    .home-leagues {
+        width: 100%;
+        color: white;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .home-leagues .card {
+        width: 100%;
+        height: 7.5vh;
+        border: 2px solid var(--f1-light-grey);
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        padding: 0 1.5%;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .home-leagues .card:visited,
+    .home-leagues .card:hover,
+    .home-leagues .card:active {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .home-leagues .card:hover {
+        border-color: var(--f1-red);
+    }
+
+    .home-leagues .card .league-image {
+        height: 75%;
+        aspect-ratio: 1 / 1;
+        border: 1px solid var(--f1-light-grey);
+        border-radius: 10%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }   
+
+    .home-leagues .card .league-image .image {
+        width: 75%;
+        height: 75%;
+    }
+
+    .home-leagues .card .content {
+        width: 100%;
+        height: 75%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-left: 2.5%;
+    }
+
+    .home-leagues .card .content .content-text {
+        height: 80%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .home-leagues .card .content .content-text h3 {
+        font-size: 1rem;
+    }
+
+    .home-leagues .card .content .content-text .league-info {
+        display: flex;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--f1-light-grey);
+    }
+
+    .league-info span {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .league-info span + span::before {
+        content: "";
+        width: 0.35rem;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background-color: var(--f1-red);
+        margin: 0 0.75rem;
+    }
+
+    .create-league {
+        width: 100%;
+        margin: 1rem auto 0 auto;
+        padding: 1rem 0;
+        border: 2px solid var(--f1-light-grey);
+        border-radius: 0.5rem;
+        background-color: transparent;
+        color: white;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 1rem;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .create-league:hover {
+        border-color: var(--f1-red);
+        color: var(--f1-red);
     }
 
     .home-right {
         background-color: gold;
-        width: 50%;
+        width: 40%;
         display: flex;
         justify-content: center;
     }
@@ -377,14 +573,11 @@
         overflow-y: auto;
     }
 
-    /* TODO: It's just concept, implement final version*/
     .modal-overlay {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
+        inset: 0;
+        background: linear-gradient(to bottom, rgba(var(--f1-dark-grey), 0.8), rgba(var(--f1-light-grey), 0.8));
+        backdrop-filter: blur(10px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -392,76 +585,189 @@
     }
 
     .create-league-modal {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        max-width: 500px;
-        max-height: 80vh;
+        width: 35vw;
+        height: 50vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: var(--f1-dark-grey);
+        border: 1px solid var(--f1-light-grey);
+        border-radius: 2.5rem;
+        box-shadow:
+            0 30px 60px rgba(0, 0, 0, 0.45),
+            0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+        color: white;
+    }
+
+    .modal-top {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 3% 0 2% 5%;
+    }
+
+    .modal-top h2 {
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 1.75rem;
+    }
+
+    .modal-top p {
+        margin-top: 2%;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .modal-body {
+        flex: 1;
+        padding: 2.5% 5%;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
         overflow-y: auto;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        border-top: 1px solid var(--f1-light-grey);
+        border-bottom: 1px solid var(--f1-light-grey);
+
+        scrollbar-width: thin;
+        scrollbar-color: var(--f1-light-grey) transparent;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .form-group label {
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 1rem;
     }
 
     .league-input {
-        width: 100%;
-        padding: 12px;
-        border: 2px solid #e5e5e5;
-        border-radius: 8px;
-        font-size: 16px;
-        margin-bottom: 1rem;
+        height: 5vh;
+        padding: 0 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        font-size: 1rem;
     }
 
-    .friends-section {
-        margin-bottom: 1.5rem;
+    .league-input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .league-input:focus {
+        outline: none;
+        border-color: var(--f1-light-grey);
+        box-shadow: 0 0 0 5px var(--f1-dark-grey);
     }
 
     .friends-list {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 2px solid #e5e5e5;
-        border-radius: 8px;
-        padding: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
     }
 
     .friend-item {
-        padding: 8px 12px;
+        height: 45px;
+        padding: 0.75rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        display: inline-flex;
+        align-items: center;
         cursor: pointer;
-        border-radius: 6px;
-        transition: background 0.2s;
     }
 
     .friend-item:hover {
-        background: #f5f5f5;
+        background: var(--f1-red-light);
     }
 
     .friend-item.selected {
-        background: #3b82f6;
+        background: var(--f1-red);
+    }
+
+    .friend-name {
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        font-size: 1rem;
+    }
+
+    .empty-friends {
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-regular);
+        font-size: 1rem;
         color: white;
     }
 
     .modal-actions {
+        flex-shrink: 0;
         display: flex;
-        gap: 1rem;
         justify-content: flex-end;
+        gap: 1rem;
+        padding: 2.5% 2.5%;
     }
 
+    .cancel,
     .create {
-        background: #10b981;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
+        padding: 0.625rem;
+        border-radius: 0.75rem;
+        font-family: var(--font-f1);
+        font-weight: var(--font-f1-bold);
+        font-size: 1.25rem;
+        cursor: pointer;
     }
 
     .cancel {
-        background: #6b7280;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.05);
         color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
     }
 
-    .cancel:hover, .create:hover:not(:disabled) {
-        opacity: 0.9;
+    .cancel:hover {
+        background: var(--f1-light-grey);
+    }
+
+    .create {
+        border: none;
+        background: var(--f1-red-light);
+        color: white;
+    }
+
+    .create:hover:not(:disabled) {
+        background: var(--f1-red);
+    }
+
+    .create:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    .modal-fade-enter-active,
+    .modal-fade-leave-active {
+        transition: opacity 0.22s ease;
+    }
+
+    .modal-fade-enter-active .create-league-modal,
+    .modal-fade-leave-active .create-league-modal {
+        transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+
+    .modal-fade-enter-from,
+    .modal-fade-leave-to {
+        opacity: 0;
+    }
+
+    .modal-fade-enter-from .create-league-modal,
+    .modal-fade-leave-to .create-league-modal {
+        transform: translateY(12px) scale(0.98);
+        opacity: 0;
     }
 </style>

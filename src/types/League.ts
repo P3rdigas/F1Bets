@@ -4,4 +4,5 @@ export interface League {
   seasonYear: number;
   ownerId: string;
   ownerUsername: string;
+  memberCount?: number;
 }
